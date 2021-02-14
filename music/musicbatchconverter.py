@@ -12,13 +12,19 @@ import subprocess
 from concurrent import futures
 
 def exec_cmd(cmd):
-    try:
+    if isinstance(cmd, str):
+        cmd = cmd.split(' ')
+
+    if sys.platform.startswith('win32'):
         # TODO this does not appear to work at this time
-        # if on windows set priority its way
         si = subprocess.STARTUPINFO()
         si.dwFlags = subprocess.BELOW_NORMAL_PRIORITY_CLASS
         subprocess.call(cmd, shell=False, startupinfo=si)
-    except AttributeError:
+    elif sys.platform.startswith('linux'):
+        cmd.insert(0, "nice")
+        cmd.insert(1, "-n19")
+        subprocess.call(cmd, shell=False)
+    else:
         subprocess.call(cmd, shell=False)
    
 # Argument custom validators
