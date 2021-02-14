@@ -9,9 +9,10 @@ import textwrap
 import argparse
 import sys
 import subprocess
+import re
 from concurrent import futures
 
-def exec_cmd(cmd):
+def exec_cmd(cmd, output=None):
     if isinstance(cmd, str):
         cmd = cmd.split(' ')
 
@@ -19,14 +20,14 @@ def exec_cmd(cmd):
         # TODO this does not appear to work at this time
         si = subprocess.STARTUPINFO()
         si.dwFlags = subprocess.BELOW_NORMAL_PRIORITY_CLASS
-        subprocess.call(cmd, shell=False, startupinfo=si)
+        return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT, startupinfo=si)
     elif sys.platform.startswith('linux'):
         cmd.insert(0, "nice")
         cmd.insert(1, "-n19")
-        subprocess.call(cmd, shell=False)
+        return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT)
     else:
-        subprocess.call(cmd, shell=False)
-   
+        return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT)
+
 # Argument custom validators
 def argcheck_ifm(string):
     if_mask = tuple(string.strip().split(','))
@@ -55,12 +56,14 @@ def argcheck_ffargs(string):
     return ffargs
 
 def argcheck_preset(string):
-    if string == "normalized":
+    if string == "smaller":
         return 1
-    elif string == "smaller":
-        return 2
     elif string == "compatible":
+        return 2
+    elif string == "dynamic_compressed":
         return 3
+    elif string == "normalized":
+        return 4
     elif string == "":
         return 0
     else:
@@ -99,7 +102,7 @@ try:
     parser.add_argument("-max_workers", default=os.cpu_count(), type=int, help="Set max parallel converter tasks. By default is your CPU thread count.")
     parser.add_argument("-v", "--verbose", dest="v", help="Verbose mode", action="store_true")
     parser.add_argument("-vff", "--verboseffmpeg", dest="vff", help="Verbose mode for ffmpeg", action="store_true")
-    parser.add_argument("-p", "--preset", default="", type=argcheck_preset, help="Set a preset that overwrites other arguments. Possible values: normalized, smaller, compatible")
+    parser.add_argument("-p", "--preset", default="", type=argcheck_preset, help="Set a preset that overwrites other arguments. Possible values: smaller, compatible, dynamic_compressed")
 
     args = parser.parse_args()
 
@@ -122,22 +125,55 @@ if not args.ignore_not_empty and args.output_dir.exists() and len(os.listdir(arg
     
 # apply preset
 if args.preset == 1:
-    # normalized
-    args.ifm = argcheck_ifm("flac,wav,aif,aiff,dsd,mp3,wma,aac,m4a")
-    args.ofm = argcheck_ofm("ogg")
-    args.ffargs = argcheck_ffargs("-map 0:v? -c:v libtheora -q:v 9 -map 0:a -c:a libopus -b:a 256k -vbr constrained -af aresample=osf=flt,loudnorm,alimiter=limit=0.95:level=off")
-if args.preset == 2:
     # smaller
     args.ofm = argcheck_ifm("ogg")
     args.ffargs = argcheck_ffargs("-map 0:v? -c:v libtheora -q:v 6 -map 0:a -c:a libopus -b:a 128k -vbr constrained")
     
-if args.preset == 3:
+if args.preset == 2:
     # compatible
     args.ofm = argcheck_ofm("mp3")
     args.ffargs = argcheck_ffargs("-c:a libmp3lame -b:a 320k")
     
+if args.preset == 3:
+    # dynamic_compressed
+    args.ifm = argcheck_ifm("flac,wav,aif,aiff,dsd,mp3,wma,aac,m4a")
+    args.ofm = argcheck_ofm("ogg")
+    args.ffargs = argcheck_ffargs("-map 0:v? -c:v libtheora -q:v 9 -map 0:a -c:a libopus -b:a 256k -vbr constrained -af aresample=osf=flt,dynaudnorm")   
+    
+if args.preset == 4:
+    # normalized
+    args.ifm = argcheck_ifm("flac,wav,aif,aiff,dsd,mp3,wma,aac,m4a")
+    args.ofm = argcheck_ofm("ogg")
+    # TODO THIS REDUCES DYNAMICS! NOT WHAT I WANTED
+    # Idea: use ebur128 to measure Integrated Loudness, adjust with limiter
+    args.ffargs = argcheck_ffargs("-map 0:v? -c:v libtheora -q:v 9 -map 0:a -c:a libopus -b:a 256k -vbr constrained -af aresample=osf=flt,ebur128,alimiter=limit=0.95:level=off:attack=2.5:release=25:level_in=")
+
+def convert_file(in_filepath, out_filepath, ffpath, ffargs, preset):
+    if preset == 4:
+        # for normalisation we need to analyse the audio first
+        cmd = [ Path(ffpath), '-y', '-i', in_filepath ]
+        
+        cmd.extend(argcheck_ffargs("-map 0:a -c:a libvorbis -af ebur128 -f ogg"))
+        cmd.append(os.devnull)
+        ana_result = exec_cmd(cmd, output=subprocess.PIPE)
+        regex = "Integrated\sloudness\:\s+I\:\s+(\-\d+\.?\d*)" 
+        i_loudness = re.search(regex, str(ana_result.stdout, "utf8")).groups()[0]
+        
+        #gain_adjust = -23.0 - float(i_loudness) # difference between target vol and original vol
+        gain_adjust = -18.0 - float(i_loudness) # difference between target vol and original vol
+        ffargs = argcheck_ffargs(" ".join(ffargs) + str(gain_adjust) + "dB")
+        
+    cmd = [ Path(ffpath), '-y', '-i', in_filepath ]
+    if not args.vff:
+        cmd.extend([ '-loglevel', 'error' ])
+    cmd.extend(ffargs)
+    cmd.append(out_filepath)
+    if args.v:
+        print("    Resulting ffmpeg command: {}".format(cmd))
+    exec_cmd(cmd)
+
 # use threadpool for ffmpeg conversion as audio conversion is assumed to be singlethreaded 
-with futures.ThreadPoolExecutor(max_workers=args.max_workers) as executor:
+with futures.ProcessPoolExecutor(max_workers=args.max_workers) as executor:
     print("Starting conversion of folder {} to folder {}".format(args.input_dir, args.output_dir))
     print("Files with the endings {} will be converted to {}".format(str(args.ifm), args.ofm))
     print("Codec options to be passed to ffmpeg: ", str.join(' ', args.ffargs))
@@ -155,15 +191,8 @@ with futures.ThreadPoolExecutor(max_workers=args.max_workers) as executor:
             # Evaluate file
             if name.endswith(args.ifm):
                 out_filepath = Path(out_dirpath, Path(name).stem + '.' + args.ofm)
-                cmd = [ Path(args.ffpath), '-y', '-i', in_filepath ]
-                if not args.vff:
-                    cmd.extend([ '-loglevel', 'error' ])
-                cmd.extend(args.ffargs)
-                cmd.append(out_filepath)
-                executor.submit(exec_cmd, cmd)
+                executor.submit(convert_file, in_filepath, out_filepath, args.ffpath, args.ffargs, args.preset)
                     
-                if args.v:
-                    print("    Resulting ffmpeg command: {}".format(cmd))
             else:
                 # Copy file to destination
                 shutil.copyfile(in_filepath, Path(out_dirpath, name), follow_symlinks=False)
