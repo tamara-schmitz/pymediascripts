@@ -144,32 +144,34 @@ if args.preset == 4:
     # normalized
     args.ifm = argcheck_ifm("flac,wav,aif,aiff,dsd,mp3,wma,aac,m4a")
     args.ofm = argcheck_ofm("ogg")
-    # TODO THIS REDUCES DYNAMICS! NOT WHAT I WANTED
-    # Idea: use ebur128 to measure Integrated Loudness, adjust with limiter
-    args.ffargs = argcheck_ffargs("-map 0:v? -c:v libtheora -q:v 9 -map 0:a -c:a libopus -b:a 256k -vbr constrained -af aresample=osf=flt,ebur128,alimiter=limit=0.95:level=off:attack=2.5:release=25:level_in=")
+    args.ffargs = argcheck_ffargs("-map 0:v? -c:v libtheora -q:v 9 -map 0:a -c:a libopus -b:a 256k -vbr constrained -af aresample=osf=flt,alimiter=limit=-1.0dB:level=off:attack=5:release=25:level_in=")
 
-def convert_file(in_filepath, out_filepath, ffpath, ffargs, preset):
-    if preset == 4:
+def convert_file(in_filepath, out_filepath):
+    ffargs = args.ffargs
+    if args.preset == 4:
+        #TODO move this to somewhere else, not as a preset
         # for normalisation we need to analyse the audio first
-        cmd = [ Path(ffpath), '-y', '-i', in_filepath ]
+        cmd = [ Path(args.ffpath), '-y', '-i', in_filepath ]
         
-        cmd.extend(argcheck_ffargs("-map 0:a -c:a libvorbis -af ebur128 -f ogg"))
+        cmd.extend(["-map", "0:a", "-af", "ebur128", "-f", "wav"])
         cmd.append(os.devnull)
         ana_result = exec_cmd(cmd, output=subprocess.PIPE)
-        regex = "Integrated\sloudness\:\s+I\:\s+(\-\d+\.?\d*)" 
-        i_loudness = re.search(regex, str(ana_result.stdout, "utf8")).groups()[0]
+        ana_result = str(ana_result.stdout, "utf8")
+        i_loudness = re.search("Integrated\sloudness\:\s+I\:\s+(\-\d+\.?\d*)", ana_result).groups()[0]
+        i_loudrange = re.search("Loudness\srange\:\s+LRA\:\s+(\d+\.?\d*)", ana_result).groups()[0]
         
-        #gain_adjust = -23.0 - float(i_loudness) # difference between target vol and original vol
-        gain_adjust = -18.0 - float(i_loudness) # difference between target vol and original vol
+        # difference between target integrated LUFS and original vol
+        # dynamic music will get lowered
+        gain_adjust = -18.0 - float(i_loudness) - (float(i_loudrange) * 0.05)
         ffargs = argcheck_ffargs(" ".join(ffargs) + str(gain_adjust) + "dB")
         
-    cmd = [ Path(ffpath), '-y', '-i', in_filepath ]
+    cmd = [ Path(args.ffpath), '-y', '-i', in_filepath ]
     if not args.vff:
         cmd.extend([ '-loglevel', 'error' ])
     cmd.extend(ffargs)
     cmd.append(out_filepath)
     if args.v:
-        print("    Resulting ffmpeg command: {}".format(cmd))
+        print("  Executing ffmpeg command: {}".format(cmd))
     exec_cmd(cmd)
 
 # use threadpool for ffmpeg conversion as audio conversion is assumed to be singlethreaded 
@@ -179,20 +181,20 @@ with futures.ProcessPoolExecutor(max_workers=args.max_workers) as executor:
     print("Codec options to be passed to ffmpeg: ", str.join(' ', args.ffargs))
     for dirpath, dirnames, filenames in os.walk(args.input_dir):
         if args.v:
-            print("Currently processing dir " + str(dirpath))
+            print("Currently evaluating directory " + str(dirpath))
             
         out_dirpath = Path(args.output_dir, Path(dirpath).relative_to(args.input_dir))
         out_dirpath.mkdir(exist_ok=True)
         for name in sorted(filenames):
-            if args.v:
-                print("  File: " + str(name))
-            
             in_filepath = Path(dirpath, name)
             # Evaluate file
             if name.endswith(args.ifm):
                 out_filepath = Path(out_dirpath, Path(name).stem + '.' + args.ofm)
-                executor.submit(convert_file, in_filepath, out_filepath, args.ffpath, args.ffargs, args.preset)
+                executor.submit(convert_file, in_filepath, out_filepath)
                     
             else:
                 # Copy file to destination
+                if args.v:
+                    print("  Copying File: " + str(name))
+            
                 shutil.copyfile(in_filepath, Path(out_dirpath, name), follow_symlinks=False)
