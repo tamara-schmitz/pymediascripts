@@ -102,7 +102,7 @@ try:
     parser.add_argument("-max_workers", default=os.cpu_count(), type=int, help="Set max parallel converter tasks. By default is your CPU thread count.")
     parser.add_argument("-v", "--verbose", dest="v", help="Verbose mode", action="store_true")
     parser.add_argument("-vff", "--verboseffmpeg", dest="vff", help="Verbose mode for ffmpeg", action="store_true")
-    parser.add_argument("-p", "--preset", default="", type=argcheck_preset, help="Set a preset that overwrites other arguments. Possible values: smaller, compatible, dynamic_compressed")
+    parser.add_argument("-p", "--preset", default="", type=argcheck_preset, help="Set a preset that overwrites other arguments. Possible values: smaller, compatible, dynamic_compressed, normalized")
 
     args = parser.parse_args()
 
@@ -138,13 +138,19 @@ if args.preset == 3:
     # dynamic_compressed
     args.ifm = argcheck_ifm("flac,wav,aif,aiff,dsd,mp3,wma,aac,m4a")
     args.ofm = argcheck_ofm("ogg")
-    args.ffargs = argcheck_ffargs("-map 0:v? -c:v libtheora -q:v 9 -map 0:a -c:a libopus -b:a 256k -vbr constrained -af aresample=osf=flt,dynaudnorm")   
+    args.ffargs = argcheck_ffargs("-map 0:v? -c:v libtheora -q:v 9 -map 0:a " +
+        " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
+        " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99" +
+        "-c:a libopus -b:a 256k -vbr constrained -af aresample=osf=flt,dynaudnorm")
     
 if args.preset == 4:
     # normalized
     args.ifm = argcheck_ifm("flac,wav,aif,aiff,dsd,mp3,wma,aac,m4a")
     args.ofm = argcheck_ofm("ogg")
-    args.ffargs = argcheck_ffargs("-map 0:v? -c:v libtheora -q:v 9 -map 0:a -c:a libopus -b:a 256k -vbr constrained -af aresample=osf=flt,alimiter=limit=-1.0dB:level=off:attack=5:release=25:level_in=")
+    args.ffargs = argcheck_ffargs("-map 0:v? -c:v libtheora -q:v 9 -map 0:a " +
+        " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
+        " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99" +
+        "-c:a libopus -b:a 256k -vbr constrained -af aresample=osf=flt,alimiter=limit=-1.0dB:level=off:attack=5:release=25:level_in=")
 
 def convert_file(in_filepath, out_filepath):
     ffargs = args.ffargs
