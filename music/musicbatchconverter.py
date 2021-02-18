@@ -29,13 +29,21 @@ def exec_cmd(cmd, output=None):
         return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT)
 
 # Argument custom validators
+def remove_empty_from_list(li):
+    try:
+        while True:
+            li.remove('')
+    except ValueError:
+        pass
+    return li
+    
 def argcheck_ifm(string):
-    if_mask = tuple(string.strip().split(','))
+    if_mask = string.strip().split(',')
     for el in if_mask:
         if not el.isalpha:
             print('Expected a list of file endings like: flac,wav,wave')
             raise argparse.ArgumentError()
-    return if_mask
+    return tuple(remove_empty_from_list(if_mask))
 def argcheck_ofm(string):
     of_mask = string.strip()
     if not of_mask.isalpha:
@@ -53,7 +61,7 @@ def argcheck_ffargs(string):
     if '-c:a' not in ffargs:
         print('Expected a valid audio codec string in \" like: \"-c:a libvorbis -q:a 7')
         raise argparse.ArgumentError()
-    return ffargs
+    return remove_empty_from_list(ffargs)
 
 def argcheck_preset(string):
     if string == "smaller":
@@ -94,7 +102,7 @@ try:
     
     parser.add_argument("input_dir", type=Path, help="path to input folder. Use \\ or \" for names with spaces")
     parser.add_argument("output_dir", type=Path, help="output folder. Use \\ or \" for names with spaces")
-    parser.add_argument("--ignore-not-empty", type=Path, help="continue even if the output directory contains files. This overwrites existing files.")
+    parser.add_argument("--ignore-not-empty", action="store_true", help="continue even if the output directory contains files. This overwrites existing files.")
     parser.add_argument("-ifm", "--inputfilemask", dest="ifm", default="flac,wav,aif,aiff,dsd", type=argcheck_ifm, help="Filter mask defining which files will be converted. Other files are copied")
     parser.add_argument("-ofm", "--outputformat", dest="ofm", default="ogg", type=argcheck_ofm, help="Output format of converted files")
     parser.add_argument("-ffpath", "--ffmpegpath", dest="ffpath", default="ffmpeg", type=argcheck_ffpath, help="Path to ffmpeg")
@@ -126,9 +134,9 @@ if not args.ignore_not_empty and args.output_dir.exists() and len(os.listdir(arg
 # apply preset
 if args.preset == 1:
     # smaller
-    args.ofm = argcheck_ifm("ogg")
-    args.ffargs = argcheck_ffargs("-map 0:v? -c:v libtheora -q:v 6 -map 0:a -c:a libopus -b:a 128k -vbr constrained")
-    
+    args.ofm = argcheck_ofm("ogg")
+    args.ffargs = argcheck_ffargs("-map 0:v:0? -c:v libtheora -q:v 6 -map 0:a" +
+        " -c:a libopus -b:a 128k -vbr constrained")
 if args.preset == 2:
     # compatible
     args.ofm = argcheck_ofm("mp3")
@@ -138,26 +146,27 @@ if args.preset == 3:
     # dynamic_compressed
     args.ifm = argcheck_ifm("flac,wav,aif,aiff,dsd,mp3,wma,aac,m4a")
     args.ofm = argcheck_ofm("ogg")
-    args.ffargs = argcheck_ffargs("-map 0:v? -c:v libtheora -q:v 9 -map 0:a " +
+    args.ffargs = argcheck_ffargs("-map 0:v:0? -c:v libtheora -q:v 9 -map 0:a" +
+        " -c:a libopus -b:a 256k -vbr constrained -af aresample=osf=flt,dynaudnorm=r=-18dB" +
         " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
-        " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99" +
-        "-c:a libopus -b:a 256k -vbr constrained -af aresample=osf=flt,dynaudnorm")
+        " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99")
     
 if args.preset == 4:
     # normalized
     args.ifm = argcheck_ifm("flac,wav,aif,aiff,dsd,mp3,wma,aac,m4a")
     args.ofm = argcheck_ofm("ogg")
-    args.ffargs = argcheck_ffargs("-map 0:v? -c:v libtheora -q:v 9 -map 0:a " +
+    args.ffargs = argcheck_ffargs("-map 0:a -map 0:v:0? -c:v libtheora -q:v 9" +
+        " -c:a libopus -b:a 256k -vbr constrained" +
         " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
         " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99" +
-        "-c:a libopus -b:a 256k -vbr constrained -af aresample=osf=flt,alimiter=limit=-1.0dB:level=off:attack=5:release=25:level_in=")
+        " -af aresample=osf=flt,alimiter=limit=-1.0dB:level=off:attack=5:release=25:level_in=")
 
 def convert_file(in_filepath, out_filepath):
     ffargs = args.ffargs
     if args.preset == 4:
         #TODO move this to somewhere else, not as a preset
         # for normalisation we need to analyse the audio first
-        cmd = [ Path(args.ffpath), '-y', '-i', in_filepath ]
+        cmd = [ Path(args.ffpath), '-y', '-i', Path(in_filepath) ]
         
         cmd.extend(["-map", "0:a", "-af", "ebur128", "-f", "wav"])
         cmd.append(os.devnull)
@@ -168,39 +177,57 @@ def convert_file(in_filepath, out_filepath):
         
         # difference between target integrated LUFS and original vol
         # dynamic music will get lowered
+        # ReplayGain and Spotify target is actually around -14LUFS or dB... after refactoring this should be customisable
         gain_adjust = -18.0 - float(i_loudness) - (float(i_loudrange) * 0.05)
         ffargs = argcheck_ffargs(" ".join(ffargs) + str(gain_adjust) + "dB")
         
-    cmd = [ Path(args.ffpath), '-y', '-i', in_filepath ]
+    cmd = [ Path(args.ffpath), '-y', '-i', Path(in_filepath) ]
     if not args.vff:
         cmd.extend([ '-loglevel', 'error' ])
     cmd.extend(ffargs)
-    cmd.append(out_filepath)
+    cmd.append(Path(out_filepath))
     if args.v:
         print("  Executing ffmpeg command: {}".format(cmd))
     exec_cmd(cmd)
 
-# use threadpool for ffmpeg conversion as audio conversion is assumed to be singlethreaded 
-with futures.ProcessPoolExecutor(max_workers=args.max_workers) as executor:
-    print("Starting conversion of folder {} to folder {}".format(args.input_dir, args.output_dir))
-    print("Files with the endings {} will be converted to {}".format(str(args.ifm), args.ofm))
-    print("Codec options to be passed to ffmpeg: ", str.join(' ', args.ffargs))
-    for dirpath, dirnames, filenames in os.walk(args.input_dir):
-        if args.v:
-            print("Currently evaluating directory " + str(dirpath))
-            
-        out_dirpath = Path(args.output_dir, Path(dirpath).relative_to(args.input_dir))
-        out_dirpath.mkdir(exist_ok=True)
-        for name in sorted(filenames):
-            in_filepath = Path(dirpath, name)
-            # Evaluate file
-            if name.endswith(args.ifm):
-                out_filepath = Path(out_dirpath, Path(name).stem + '.' + args.ofm)
-                executor.submit(convert_file, in_filepath, out_filepath)
+# use thread queue for copying to ensure that long copy operations do not starve the conversion task pool
+with futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='copy') as copyexecutor:
+    copy_tasks = 0
+    # use threadpool for ffmpeg conversion as audio conversion is assumed to be singlethreaded 
+    with futures.ProcessPoolExecutor(max_workers=args.max_workers) as convertexecutor:
+        convert_tasks = 0
+        print("Starting conversion of folder {} to folder {}".format(args.input_dir, args.output_dir))
+        print("Files with the endings {} will be converted to {}".format(str(args.ifm), args.ofm))
+        print("Codec options to be passed to ffmpeg: ", str.join(' ', args.ffargs))
+        for dirpath, dirnames, filenames in os.walk(args.input_dir):
+            if args.v:
+                print("Currently evaluating directory " + str(dirpath))
+                
+            out_dirpath = Path(args.output_dir, Path(dirpath).relative_to(args.input_dir))
+            out_dirpath.mkdir(exist_ok=True)
+            for name in sorted(filenames):
+                in_filepath = Path(dirpath, name)
+                # Evaluate file
+                if name.endswith(args.ifm):
+                    out_filepath = Path(out_dirpath, Path(name).stem + '.' + args.ofm)
+                    convertexecutor.submit(convert_file, in_filepath, out_filepath)
+                    convert_tasks += 1
+                        
+                else:
+                    # Copy file to destination
+                    if args.v:
+                        print("  Copying File: " + str(name))
+                
+                    copyexecutor.submit(shutil.copyfile, in_filepath, Path(out_dirpath, name), follow_symlinks=False)
+                    copy_tasks += 1
                     
-            else:
-                # Copy file to destination
-                if args.v:
-                    print("  Copying File: " + str(name))
-            
-                shutil.copyfile(in_filepath, Path(out_dirpath, name), follow_symlinks=False)
+        # show progress
+        copies_completed = futures.as_completed(copyexecutor)
+        converts_completed = futures.as_completed(convertexecutor)
+        current_convert = 0
+        for el in converts_completed:
+            current_convert += 1
+            print("{} out of {} files converted".format(current_convert, convert_tasks))
+        
+        print("Completed")
+        
