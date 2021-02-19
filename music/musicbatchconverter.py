@@ -192,13 +192,14 @@ def convert_file(in_filepath, out_filepath):
 
 # use thread queue for copying to ensure that long copy operations do not starve the conversion task pool
 with futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='copy') as copyexecutor:
-    copy_tasks = 0
+    copy_tasks = set()
     # use threadpool for ffmpeg conversion as audio conversion is assumed to be singlethreaded 
     with futures.ProcessPoolExecutor(max_workers=args.max_workers) as convertexecutor:
-        convert_tasks = 0
+        convert_tasks = set()
         print("Starting conversion of folder {} to folder {}".format(args.input_dir, args.output_dir))
         print("Files with the endings {} will be converted to {}".format(str(args.ifm), args.ofm))
         print("Codec options to be passed to ffmpeg: ", str.join(' ', args.ffargs))
+        print()
         for dirpath, dirnames, filenames in os.walk(args.input_dir):
             if args.v:
                 print("Currently evaluating directory " + str(dirpath))
@@ -210,24 +211,26 @@ with futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='copy') as cop
                 # Evaluate file
                 if name.endswith(args.ifm):
                     out_filepath = Path(out_dirpath, Path(name).stem + '.' + args.ofm)
-                    convertexecutor.submit(convert_file, in_filepath, out_filepath)
-                    convert_tasks += 1
+                    convert_tasks.add(convertexecutor.submit(convert_file, in_filepath, out_filepath))
                         
                 else:
                     # Copy file to destination
                     if args.v:
                         print("  Copying File: " + str(name))
+                    copy_tasks.add(copyexecutor.submit(shutil.copyfile, in_filepath, Path(out_dirpath, name), follow_symlinks=False))
                 
-                    copyexecutor.submit(shutil.copyfile, in_filepath, Path(out_dirpath, name), follow_symlinks=False)
-                    copy_tasks += 1
+                if not args.v:
+                    print("{} files to copy, {} files to convert".format(len(copy_tasks), len(convert_tasks)), end='\r')
                     
+        print("\nFile evaluation finished")
+        
         # show progress
-        copies_completed = futures.as_completed(copyexecutor)
-        converts_completed = futures.as_completed(convertexecutor)
+        #copies_completed = futures.as_completed(copy_tasks)
+        converts_completed = futures.as_completed(convert_tasks)
         current_convert = 0
         for el in converts_completed:
             current_convert += 1
-            print("{} out of {} files converted".format(current_convert, convert_tasks))
+            print("{} out of {} files converted".format(current_convert, len(convert_tasks)), end='\r')
         
-        print("Completed")
+        print("\nCompleted")
         
