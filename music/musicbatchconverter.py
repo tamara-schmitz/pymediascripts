@@ -102,6 +102,7 @@ try:
     
     parser.add_argument("input_dir", type=Path, help="path to input folder. Use \\ or \" for names with spaces")
     parser.add_argument("output_dir", type=Path, help="output folder. Use \\ or \" for names with spaces")
+    parser.add_argument("--ignore-dir", type=Path, help="Ignore directory with the specified folder name.")
     parser.add_argument("--ignore-not-empty", action="store_true", help="continue even if the output directory contains files. This overwrites existing files.")
     parser.add_argument("-ifm", "--inputfilemask", dest="ifm", default="flac,wav,aif,aiff,dsd", type=argcheck_ifm, help="Filter mask defining which files will be converted. Other files are copied")
     parser.add_argument("-ofm", "--outputformat", dest="ofm", default="ogg", type=argcheck_ofm, help="Output format of converted files")
@@ -136,18 +137,18 @@ if args.preset == 1:
     # smaller
     args.ofm = argcheck_ofm("ogg")
     args.ffargs = argcheck_ffargs("-map 0:v:0? -c:v libtheora -q:v 6 -map 0:a" +
-        " -c:a libopus -b:a 128k -vbr constrained")
+        " -c:a libopus -b:a 128k -vbr constrained -ac 2")
 if args.preset == 2:
     # compatible
     args.ofm = argcheck_ofm("mp3")
-    args.ffargs = argcheck_ffargs("-c:a libmp3lame -b:a 320k")
+    args.ffargs = argcheck_ffargs("-c:a libmp3lame -b:a 320k -ac 2")
     
 if args.preset == 3:
     # dynamic_compressed
     args.ifm = argcheck_ifm("flac,wav,aif,aiff,dsd,mp3,wma,aac,m4a")
     args.ofm = argcheck_ofm("ogg")
     args.ffargs = argcheck_ffargs("-map 0:v:0? -c:v libtheora -q:v 9 -map 0:a" +
-        " -c:a libopus -b:a 256k -vbr constrained -af aresample=osf=flt,dynaudnorm=r=-18dB" +
+        " -c:a libopus -b:a 256k -vbr constrained -ac 2 -af aresample=osf=flt,dynaudnorm=r=-18dB" +
         " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
         " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99")
     
@@ -203,6 +204,10 @@ with futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='copy') as cop
         for dirpath, dirnames, filenames in os.walk(args.input_dir):
             if args.v:
                 print("Currently evaluating directory " + str(dirpath))
+                
+            if str(args.ignore_dir) != '.' and str(args.ignore_dir) in dirpath:
+                # Skip directory that is meant to be ignored
+                continue
                 
             out_dirpath = Path(args.output_dir, Path(dirpath).relative_to(args.input_dir))
             out_dirpath.mkdir(exist_ok=True)
