@@ -40,13 +40,13 @@ def remove_empty_from_list(li):
 def argcheck_ifm(string):
     if_mask = string.strip().split(',')
     for el in if_mask:
-        if not el.isalpha:
-            print('Expected a list of file endings like: flac,wav,wave')
+        if not el.isalnum:
+            print('Expected a list of file endings like: flac,wav,wave,mp3')
             raise argparse.ArgumentError()
     return tuple(remove_empty_from_list(if_mask))
 def argcheck_ofm(string):
     of_mask = string.strip()
-    if not of_mask.isalpha:
+    if not of_mask.isalnum:
         print('Expected a file ending like: ogg')
         raise argparse.ArgumentError()
     return of_mask
@@ -225,12 +225,13 @@ with futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='copy') as cop
         print("\nFile evaluation finished")
         
         # show progress
-        #copies_completed = futures.as_completed(copy_tasks)
-        converts_completed = futures.as_completed(convert_tasks)
-        current_convert = 0
-        for el in converts_completed:
-            current_convert += 1
-            print("{} out of {} files converted".format(current_convert, len(convert_tasks)), end='\r')
+        if not args.v:
+            copies_completed = futures.as_completed(copy_tasks)
+            converts_completed = futures.as_completed(convert_tasks)
+            current_convert = 0
+            for el in converts_completed:
+                current_convert += 1
+                print("{} out of {} files converted".format(current_convert, len(convert_tasks)), end='\r')
         
         print("\nCompleted")
         
