@@ -56,6 +56,8 @@ def argcheck_ifm(string):
     return tuple(remove_empty_from_list(if_mask))
 def argcheck_ofm(string):
     of_mask = string.strip()
+    if of_mask.startswith('.'):
+        of_mask = of_mask[1:]
     if not of_mask.isalnum:
         print('Expected a file ending like: ogg')
         raise argparse.ArgumentError()
