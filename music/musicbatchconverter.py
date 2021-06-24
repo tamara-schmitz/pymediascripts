@@ -163,7 +163,7 @@ if args.preset == 3:
     args.ifm = argcheck_ifm("flac,wav,aif,aiff,ape,dsd,mp3,wma,aac,m4a")
     args.ofm = argcheck_ofm("ogg")
     args.ffargs = argcheck_ffargs("-map 0:v:0? -c:v libtheora -q:v 9 -map 0:a" +
-        " -c:a libopus -b:a 256k -vbr constrained -ac 2 -af aresample=osf=flt,dynaudnorm=r=-18dB" +
+        " -c:a libopus -b:a 256k -vbr constrained -ac 2 -af aresample=osf=flt,dynaudnorm=r=-17dB" +
         " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
         " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99")
     
