@@ -19,12 +19,12 @@ def exec_cmd(cmd, output=None):
     if isinstance(cmd, str):
         cmd = cmd.split(' ')
 
-    if sys.platform.startswith('win32'):
+    if sys.platform == 'win32':
         # TODO this does not appear to work at this time
         si = subprocess.STARTUPINFO()
         si.dwFlags = subprocess.BELOW_NORMAL_PRIORITY_CLASS
         return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT, startupinfo=si)
-    elif sys.platform.startswith('linux'):
+    elif sys.platform == 'linux' or sys.platform == 'darwin':
         cmd.insert(0, "nice")
         cmd.insert(1, "-n19")
         return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT)
@@ -152,7 +152,7 @@ if args.preset == 1:
     # smaller
     args.ofm = argcheck_ofm("ogg")
     args.ffargs = argcheck_ffargs("-map 0:v:0? -c:v libtheora -q:v 6 -map 0:a" +
-        " -c:a libopus -b:a 128k -vbr constrained -ac 2")
+        " -c:a libvorbis -q:a 5 -ac 2")
 if args.preset == 2:
     # compatible
     args.ofm = argcheck_ofm("mp3")
@@ -161,8 +161,8 @@ if args.preset == 2:
 if args.preset == 3:
     # dynamic_compressed
     args.ifm = argcheck_ifm("flac,wav,aif,aiff,ape,dsd,mp3,wma,aac,m4a")
-    args.ofm = argcheck_ofm("ogg")
-    args.ffargs = argcheck_ffargs("-map 0:v:0? -c:v libtheora -q:v 9 -map 0:a" +
+    args.ofm = argcheck_ofm("mka")
+    args.ffargs = argcheck_ffargs("-map 0" +
         " -c:a libopus -b:a 256k -vbr constrained -ac 2 -af aresample=osf=flt,dynaudnorm=r=-17dB" +
         " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
         " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99")
@@ -170,8 +170,8 @@ if args.preset == 3:
 if args.preset == 4:
     # normalized
     args.ifm = argcheck_ifm("flac,wav,aif,aiff,ape,dsd,mp3,wma,aac,m4a")
-    args.ofm = argcheck_ofm("ogg")
-    args.ffargs = argcheck_ffargs("-q:v 9" +
+    args.ofm = argcheck_ofm("mka")
+    args.ffargs = argcheck_ffargs("-map 0 -ac 2 -c copy" +
         " -c:a libopus -b:a 256k -vbr constrained" +
         " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
         " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99" +
@@ -250,9 +250,10 @@ with tempfile.TemporaryDirectory() as tempdir:
 
             for dirpath, dirnames, filenames in os.walk(args.input_dir):
                 if args.v:
-                    print("Currently evaluating directory " + str(dirpath))
+                    print("Currently evaluating directory " + dirpath)
                     
-                if str(args.ignore_dir) != '.' and str(args.ignore_dir) in dirpath:
+                ignore_dir = str(args.ignore_dir)
+                if ignore_dir != '.' and ignore_dir in dirpath:
                     # Skip directory that is meant to be ignored
                     continue
                     

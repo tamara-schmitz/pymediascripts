@@ -39,8 +39,8 @@ def natural_keys(text):
         text = os.fsdecode(text)
     text = text.lower()
     # replace special separators and duplicate whitespaces
-    text = _regex_seps.sub(" ", text).strip()
-    text = _regex_spaces.sub(" ", text)
+    text = _regex_seps.sub(" ", text)
+    text = _regex_spaces.sub(" ", text).strip()
 
     return [ atoi(c) for c in _regex_split.split(text) ]
 
