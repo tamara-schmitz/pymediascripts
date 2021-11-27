@@ -194,7 +194,8 @@ if args.preset == 12:
     # CD-Flac
     args.ofm = argcheck_ofm("flac")
     # downsampling can cause clipping, so limiting is applied before converting back to 16bit
-    args.ffargs = argcheck_ffargs(" -c:a flac -compression_level 8 -af aresample=osf=flt,aresample=osr=44100:resampler=swr:filter_type=kaiser,alimiter=limit=-0.25dB:level=off:attack=4:release=22,aresample=osf=s16:dither_method=triangular_hp ")
+    # for limiting after resampling -0.25dB would suffice. but when limiting pre resample -1dB is just quiet enough
+    args.ffargs = argcheck_ffargs(" -c:a flac -compression_level 8 -af aresample=osf=flt,alimiter=limit=-1dB:level=off:attack=2.5:release=15,aresample=osr=44100:resampler=swr:filter_type=kaiser,aresample=osf=s16:dither_method=triangular_hp ")
 
 
 def extract_coverart(in_filepath: Path, tempdir: Path) -> Path:
@@ -276,7 +277,7 @@ with tempfile.TemporaryDirectory() as tempdir:
                 for name in sorted(filenames):
                     in_filepath = Path(dirpath, name)
                     # Evaluate file
-                    if name.endswith(args.ifm):
+                    if name.endswith(tuple(args.ifm)):
                         out_filepath = Path(out_dirpath, Path(name).stem + '.' + args.ofm)
                         convert_tasks.add(convertexecutor.submit(convert_file, in_filepath, out_filepath))
                             
