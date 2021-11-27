@@ -87,6 +87,8 @@ def argcheck_preset(string):
         return 4
     elif string == "flac":
         return 11
+    elif string == "cd-flac":
+        return 12
     elif string == "":
         return 0
     else:
@@ -126,7 +128,7 @@ try:
     parser.add_argument("-max_workers", default=os.cpu_count(), type=int, help="Set max parallel converter tasks. By default is your CPU thread count.")
     parser.add_argument("-v", "--verbose", dest="v", help="Verbose mode", action="store_true")
     parser.add_argument("-vff", "--verboseffmpeg", dest="vff", help="Verbose mode for ffmpeg", action="store_true")
-    parser.add_argument("-p", "--preset", default="", type=argcheck_preset, help="Set a preset that overwrites other arguments. Possible values: smaller, compatible, dynamic_compressed, normalized, flac")
+    parser.add_argument("-p", "--preset", default="", type=argcheck_preset, help="Set a preset that overwrites other arguments. Possible values: smaller, compatible, dynamic_compressed, normalized, flac, cd-flac")
 
     args = parser.parse_args()
 
@@ -178,7 +180,14 @@ if args.preset == 4:
 if args.preset == 11:
     # Flac
     args.ofm = argcheck_ofm("flac")
-    args.ffargs = argcheck_ffargs(" -c:a flac -compression_level 8 -sample_fmt s16 -dither_method triangular_hp")
+    args.ffargs = argcheck_ffargs(" -c:a flac -compression_level 8 ")
+
+if args.preset == 12:
+    # CD-Flac
+    args.ofm = argcheck_ofm("flac")
+    # downsampling can cause clipping, so limiting is applied before converting back to 16bit
+    args.ffargs = argcheck_ffargs(" -c:a flac -compression_level 8 -af aresample=osf=flt,aresample=osr=44100:resampler=swr:filter_type=kaiser,alimiter=limit=-0.25dB:level=off:attack=4:release=22,aresample=osf=s16:dither_method=triangular_hp ")
+
 
 def extract_coverart(in_filepath: Path, tempdir: Path) -> Path:
     '''
