@@ -46,15 +46,21 @@ def remove_empty_from_list(li):
     except ValueError:
         pass
     return li
+def pop_element_from_list(li, el) -> list:
+    try:
+        li.remove(el)
+    except ValueError:
+        pass
+    return li
     
-def argcheck_ifm(string):
+def argcheck_ifm(string) -> list:
     if_mask = string.strip().split(',')
     for el in if_mask:
         if not el.isalnum:
             print('Expected a list of file endings like: flac,wav,wave,mp3')
             raise argparse.ArgumentError()
-    return tuple(remove_empty_from_list(if_mask))
-def argcheck_ofm(string):
+    return list(remove_empty_from_list(if_mask))
+def argcheck_ofm(string) -> str:
     of_mask = string.strip()
     if of_mask.startswith('.'):
         of_mask = of_mask[1:]
@@ -62,20 +68,20 @@ def argcheck_ofm(string):
         print('Expected a file ending like: ogg')
         raise argparse.ArgumentError()
     return of_mask
-def argcheck_ffpath(string):
+def argcheck_ffpath(string) -> str:
     ffpath = string.strip()
     if 'ffmpeg' not in ffpath:
         print('Expected a valid path or environment to ffmpeg like: ffmpeg')
         raise argparse.ArgumentError()
     return ffpath
-def argcheck_ffargs(string):
+def argcheck_ffargs(string) -> list:
     ffargs = string.strip().split(' ')
     if '-c:a' not in ffargs:
         print('Expected a valid audio codec string in \" like: \"-c:a libvorbis -q:a 7')
         raise argparse.ArgumentError()
-    return remove_empty_from_list(ffargs)
+    return list(remove_empty_from_list(ffargs))
 
-def argcheck_preset(string):
+def argcheck_preset(string) -> int:
     string = string.lower()
     if string == "smaller":
         return 1
@@ -157,6 +163,7 @@ if args.preset == 1:
         " -c:a libvorbis -q:a 5 -ac 2")
 if args.preset == 2:
     # compatible
+    pop_element_from_list(args.ifm, "mp3")
     args.ofm = argcheck_ofm("mp3")
     args.ffargs = argcheck_ffargs("-c:a libmp3lame -b:a 320k -ac 2")
     
@@ -179,6 +186,7 @@ if args.preset == 4:
 
 if args.preset == 11:
     # Flac
+    pop_element_from_list(args.ifm, "flac")
     args.ofm = argcheck_ofm("flac")
     args.ffargs = argcheck_ffargs(" -c:a flac -compression_level 8 ")
 
