@@ -119,7 +119,7 @@ try:
     parser.add_argument("output_dir", type=Path, help="output folder. Use \\ or \" for names with spaces")
     parser.add_argument("--ignore-dir", type=Path, help="Ignore directory with the specified folder name.")
     parser.add_argument("--ignore-not-empty", action="store_true", help="continue even if the output directory contains files. This overwrites existing files.")
-    parser.add_argument("-ifm", "--inputfilemask", dest="ifm", default="flac,wav,aif,aiff,ape,dsd", type=argcheck_ifm, help="Filter mask defining which files will be converted. Other files are copied")
+    parser.add_argument("-ifm", "--inputfilemask", dest="ifm", default="flac,wav,aif,aiff,ape,dsd,mp3,ogg,mka", type=argcheck_ifm, help="Filter mask defining which files will be converted. Other files are copied")
     parser.add_argument("-ofm", "--outputformat", dest="ofm", default="ogg", type=argcheck_ofm, help="Output format of converted files")
     parser.add_argument("-ffpath", "--ffmpegpath", dest="ffpath", default="ffmpeg", type=argcheck_ffpath, help="Path to ffmpeg")
     parser.add_argument("-ffargs", "--ffmpegarguments", dest="ffargs", default="-map 0:v? -c:v libtheora -q:v 9 -map 0:a -c:a libvorbis -q:a 7", type=argcheck_ffargs, help="Codec options to submit to ffmpeg")
@@ -160,7 +160,6 @@ if args.preset == 2:
     
 if args.preset == 3:
     # dynamic_compressed
-    args.ifm = argcheck_ifm("flac,wav,aif,aiff,ape,dsd,mp3,wma,aac,m4a")
     args.ofm = argcheck_ofm("mka")
     args.ffargs = argcheck_ffargs("-map 0" +
         " -c:a libopus -b:a 256k -vbr constrained -ac 2 -af aresample=osf=flt,dynaudnorm=r=-17dB" +
@@ -169,7 +168,6 @@ if args.preset == 3:
     
 if args.preset == 4:
     # normalized
-    args.ifm = argcheck_ifm("flac,wav,aif,aiff,ape,dsd,mp3,wma,aac,m4a")
     args.ofm = argcheck_ofm("mka")
     args.ffargs = argcheck_ffargs("-map 0 -ac 2 -c copy" +
         " -c:a libopus -b:a 256k -vbr constrained" +
@@ -179,7 +177,6 @@ if args.preset == 4:
 
 if args.preset == 11:
     # Flac
-    args.ifm = argcheck_ifm("wav,aif,aiff,ape,dsd,mp3,wma,aac,m4a")
     args.ofm = argcheck_ofm("flac")
     args.ffargs = argcheck_ffargs(" -c:a flac -compression_level 8 -sample_fmt s16 -dither_method triangular_hp")
 
