@@ -44,8 +44,21 @@ def natural_keys(text):
 
     return [ atoi(c) for c in _regex_split.split(text) ]
 
-def exec_cmd(cmd):
-    subprocess.call(cmd, shell=False)
+def exec_cmd(cmd, output=None):
+    if isinstance(cmd, str):
+        cmd = cmd.split(' ')
+
+    if sys.platform == 'win32':
+        # TODO this does not appear to work at this time
+        si = subprocess.STARTUPINFO()
+        si.dwFlags = subprocess.BELOW_NORMAL_PRIORITY_CLASS
+        return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT, startupinfo=si)
+    elif sys.platform == 'linux' or sys.platform == 'darwin':
+        cmd.insert(0, "nice")
+        cmd.insert(1, "-n19")
+        return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT)
+    else:
+        return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT)
     
 # Check for runtime dependencies
 try:
