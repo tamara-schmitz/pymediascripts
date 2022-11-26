@@ -170,7 +170,7 @@ if args.preset == 2:
     pop_element_from_list(args.ifm, "mp3")
     args.ofm = argcheck_ofm("mp3")
     if not args.ffargs:
-        args.ffargs = argcheck_ffargs("-c:a libmp3lame -b:a 320k -ac 2")
+        args.ffargs = argcheck_ffargs("-c:a libmp3lame -b:a 320k -compression_level 0 -ac 2")
 
 if args.preset == 3:
     # dynamic_compressed
