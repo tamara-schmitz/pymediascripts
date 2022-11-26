@@ -130,7 +130,7 @@ try:
     parser.add_argument("-ifm", "--inputfilemask", dest="ifm", default="flac,wav,aif,aiff,ape,dsd,mp3,ogg,mka", type=argcheck_ifm, help="Filter mask defining which files will be converted. Other files are copied")
     parser.add_argument("-ofm", "--outputformat", dest="ofm", default="ogg", type=argcheck_ofm, help="Output format of converted files")
     parser.add_argument("-ffpath", "--ffmpegpath", dest="ffpath", default="ffmpeg", type=argcheck_ffpath, help="Path to ffmpeg")
-    parser.add_argument("-ffargs", "--ffmpegarguments", dest="ffargs", default="-map 0:v? -c:v libtheora -q:v 9 -map 0:a -c:a libvorbis -q:a 7", type=argcheck_ffargs, help="Codec options to submit to ffmpeg")
+    parser.add_argument("-ffargs", "--ffmpegarguments", dest="ffargs", type=argcheck_ffargs, help="Codec options to submit to ffmpeg")
     parser.add_argument("-max_workers", default=os.cpu_count(), type=int, help="Set max parallel converter tasks. By default is your CPU thread count.")
     parser.add_argument("-v", "--verbose", dest="v", help="Verbose mode", action="store_true")
     parser.add_argument("-vff", "--verboseffmpeg", dest="vff", help="Verbose mode for ffmpeg", action="store_true")
@@ -155,6 +155,10 @@ if not args.ignore_not_empty and args.output_dir.exists() and len(os.listdir(arg
     print("Your output directory is not empty. If you continue using --ignore-not-empty existing files may be overwritten")
     exit(-1)
     
+if not args.ffargs and not args.preset:
+    print("You neither selected a preset nor set any ffmpeg arguments. Selecting the compatible preset for you...")
+    args.preset = 2
+
 # apply preset
 if args.preset == 1:
     # smaller
@@ -165,7 +169,8 @@ if args.preset == 2:
     # compatible
     pop_element_from_list(args.ifm, "mp3")
     args.ofm = argcheck_ofm("mp3")
-    args.ffargs = argcheck_ffargs("-c:a libmp3lame -b:a 320k -ac 2")
+    if not args.ffargs:
+        args.ffargs = argcheck_ffargs("-c:a libmp3lame -b:a 320k -ac 2")
     
 if args.preset == 3:
     # dynamic_compressed
@@ -188,7 +193,8 @@ if args.preset == 11:
     # Flac
     pop_element_from_list(args.ifm, "flac")
     args.ofm = argcheck_ofm("flac")
-    args.ffargs = argcheck_ffargs(" -c:a flac -compression_level 8 ")
+    if not args.ffargs:
+        args.ffargs = argcheck_ffargs(" -c:a flac -compression_level 8 ")
 
 if args.preset == 12:
     # CD-Flac
@@ -196,7 +202,6 @@ if args.preset == 12:
     # downsampling can cause clipping, so limiting is applied before converting back to 16bit
     # for limiting after resampling -0.25dB would suffice. but when limiting pre resample -1dB is just quiet enough
     args.ffargs = argcheck_ffargs(" -c:a flac -compression_level 8 -af aresample=osf=flt,alimiter=limit=-1dB:level=off:attack=2.5:release=15,aresample=osr=44100:resampler=swr:filter_type=kaiser,aresample=osf=s16:dither_method=triangular_hp ")
-
 
 def extract_coverart(in_filepath: Path, tempdir: Path) -> Path:
     '''
