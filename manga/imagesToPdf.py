@@ -59,12 +59,12 @@ def exec_cmd(cmd, output=None):
         return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT)
     else:
         return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT)
-    
+
 # Check for runtime dependencies
 try:
     print("Testing if ImageMagick is available.")
     subprocess.call(["convert", "-version"], stdout=subprocess.PIPE, shell=False)
-    
+
 except (subprocess.SubprocessError, FileNotFoundError) as e:
     print(e)
     print("This uses the `convert` command from ImageMagick. You need to make sure that ImageMagick is installed.")
@@ -104,7 +104,7 @@ alpha_files_list = []
 # use tempdir for image conversion
 with tempfile.TemporaryDirectory() as tempdir:
     tempdir_filecounter = 1
-    
+
     # use threadpool for image conversion
     with futures.ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
         for dirpath, dirnames, filenames in os.walk(in_dir):
@@ -128,9 +128,9 @@ with tempfile.TemporaryDirectory() as tempdir:
                         #no_alpha_filename = os.path.join(dirpath, name + os.fsencode('.noalpha'))
                         tempdir_filecounter += 1
                         cmd = [ 'convert', os.path.join(dirpath, name),
-                                '-background', 'white', '-alpha', 'remove', '-alpha', 'off',
-                                '-define', 'png:compression-level=9',
-                                no_alpha_filename ]
+                               '-background', 'white', '-alpha', 'remove', '-alpha', 'off',
+                               '-define', 'png:compression-level=9',
+                               no_alpha_filename ]
                         executor.submit(exec_cmd, cmd)
                         in_files_list.append(no_alpha_filename)
                 elif name.endswith((b'.webp', b'.WEBP', b'.WebP')):
@@ -142,12 +142,12 @@ with tempfile.TemporaryDirectory() as tempdir:
                         tempdir_filecounter += 1
                         #jpg_of_webp_filename = os.path.join(dirpath, name + os.fsencode('.jpg'))
                         cmd = [ 'convert', os.path.join(dirpath, name),
-                                '-background', 'white', '-quality', '90', '-colorspace', 'YUV',
-                                '-define', 'jpeg:dct-method=float',
-                                jpg_of_webp_filename ]
+                               '-background', 'white', '-quality', '90', '-colorspace', 'YUV',
+                               '-define', 'jpeg:dct-method=float',
+                               jpg_of_webp_filename ]
                         executor.submit(exec_cmd, cmd)
                         in_files_list.append(jpg_of_webp_filename)
-                        
+
     if not args.dry:
         # Create PDF
         print("Creating actual PDF file.")

@@ -35,7 +35,7 @@ def random_string(length: int) -> str:
     chars = string.ascii_uppercase
     rnd_str = ""
     for num in range(length):
-      rnd_str += random.choice(chars)
+        rnd_str += random.choice(chars)
     return rnd_str
 
 # Argument custom validators
@@ -52,7 +52,7 @@ def pop_element_from_list(li, el) -> list:
     except ValueError:
         pass
     return li
-    
+
 def argcheck_ifm(string) -> list:
     if_mask = string.strip().split(',')
     for el in if_mask:
@@ -104,25 +104,25 @@ def argcheck_preset(string) -> int:
 # Argument handling
 try:
     descrp = textwrap.dedent('''\
-    Copys an input directory to a destination and converts applicable files to one desired output format. Say a music folder full of FLACs, MP3, PNGs will be copied but the FLACs are converted to OGG.
-    
+            Copys an input directory to a destination and converts applicable files to one desired output format. Say a music folder full of FLACs, MP3, PNGs will be copied but the FLACs are converted to OGG.
+
     --Example usages--
-    
+
     Simple:
     ./musicbatchconverter.py music-album /phone/music-album
-    
+
     To 320kbs MP3 using presets:
     ./musicbatchconverter.py --preset 3 music-album /phone/music-album
-    
+
     Other filter and conversion to MP3:
     ./musicbatchconverter.py -ifm "flac,wav,aif,aac" -ofm mp3 -ffargs "-c:a libmp3lame -b:a 224k" -vff music-album /phone/music-album
-    
+
     Using a custom ffmpeg version from a container
     ./musicbatchconverter.py -v -ffpath "podman run --rm -v $PWD:/temp/ zennoe/ffmpeg-docker-ost" /temp/music-album /temp/out
     ''')
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                      description=descrp)
-    
+
     parser.add_argument("input_dir", type=Path, help="path to input folder. Use \\ or \" for names with spaces")
     parser.add_argument("output_dir", type=Path, help="output folder. Use \\ or \" for names with spaces")
     parser.add_argument("--ignore-dir", type=Path, help="Ignore directory with the specified folder name.")
@@ -141,20 +141,20 @@ try:
 except Exception as e:
     print(e)
     exit(-1)
-     
+
 # Check for runtime dependencies
 try:
     subprocess.call([ Path(args.ffpath), "-version" ], stdout=subprocess.PIPE, shell=False)
-    
+
 except (subprocess.SubprocessError, FileNotFoundError):
     print("This uses the `ffmpeg` command. You need to make sure that ffmpeg and its dependent codec libraries are installed.")
     print("If you have tried to use `-ffpath` make sure it points to the executable.")
     exit(-1)
-    
+
 if not args.ignore_not_empty and args.output_dir.exists() and len(os.listdir(args.output_dir)) > 0:
     print("Your output directory is not empty. If you continue using --ignore-not-empty existing files may be overwritten")
     exit(-1)
-    
+
 if not args.ffargs and not args.preset:
     print("You neither selected a preset nor set any ffmpeg arguments. Selecting the compatible preset for you...")
     args.preset = 2
@@ -164,30 +164,30 @@ if args.preset == 1:
     # smaller
     args.ofm = argcheck_ofm("ogg")
     args.ffargs = argcheck_ffargs("-map 0:v:0? -c:v libtheora -q:v 6 -map 0:a" +
-        " -c:a libvorbis -q:a 5 -ac 2")
+                                  " -c:a libvorbis -q:a 5 -ac 2")
 if args.preset == 2:
     # compatible
     pop_element_from_list(args.ifm, "mp3")
     args.ofm = argcheck_ofm("mp3")
     if not args.ffargs:
         args.ffargs = argcheck_ffargs("-c:a libmp3lame -b:a 320k -ac 2")
-    
+
 if args.preset == 3:
     # dynamic_compressed
     args.ofm = argcheck_ofm("mka")
     args.ffargs = argcheck_ffargs("-map 0" +
-        " -c:a libopus -b:a 256k -vbr constrained -ac 2 -af aresample=osf=flt,dynaudnorm=r=-17dB" +
-        " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
-        " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99")
-    
+                                  " -c:a libopus -b:a 256k -vbr constrained -ac 2 -af aresample=osf=flt,dynaudnorm=r=-17dB" +
+                                  " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
+                                  " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99")
+
 if args.preset == 4:
     # normalized
     args.ofm = argcheck_ofm("mka")
     args.ffargs = argcheck_ffargs("-map 0 -ac 2 -c copy" +
-        " -c:a libopus -b:a 256k -vbr constrained" +
-        " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
-        " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99" +
-        " -af aresample=osf=flt:osr=48000:filter_type=kaiser,alimiter=limit=-1.0dB:level=off:attack=5:release=25:level_in=")
+                                  " -c:a libopus -b:a 256k -vbr constrained" +
+                                  " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
+                                  " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99" +
+                                  " -af aresample=osf=flt:osr=48000:filter_type=kaiser,alimiter=limit=-1.0dB:level=off:attack=5:release=25:level_in=")
 
 if args.preset == 11:
     # Flac
@@ -218,7 +218,7 @@ def extract_coverart(in_filepath: Path, tempdir: Path) -> Path:
 
     # search for coverart in parent folder
     iter_coverart_names = ('Folder.jpg', 'folder.jpg', 'Folder.png', 'folder.png', 'Cover.jpg', 'cover.jpg',
-            'Cover.png', 'cover.png', 'Album.jpg', 'album.jpg', 'Album.png', 'album.png')
+                           'Cover.png', 'cover.png', 'Album.jpg', 'album.jpg', 'Album.png', 'album.png')
     for child in in_filepath.parent.iterdir():
         for cname in iter_coverart_names:
             cpath = child.joinpath(cname)
@@ -232,20 +232,20 @@ def convert_file(in_filepath, out_filepath):
         #TODO move this to somewhere else, not as a preset
         # for normalisation we need to analyse the audio first
         cmd = [ Path(args.ffpath), '-y', '-i', Path(in_filepath) ]
-        
+
         cmd.extend(["-map", "0:a", "-af", "ebur128", "-f", "wav"])
         cmd.append(os.devnull)
         ana_result = exec_cmd(cmd, output=subprocess.PIPE)
         ana_result = str(ana_result.stdout, "utf8")
         i_loudness = re.search("Integrated\sloudness\:\s+I\:\s+(\-\d+\.?\d*)", ana_result).groups()[0]
         i_loudrange = re.search("Loudness\srange\:\s+LRA\:\s+(\d+\.?\d*)", ana_result).groups()[0]
-        
+
         # difference between target integrated LUFS and original vol
         # dynamic music will get lowered
         # ReplayGain and Spotify target is actually around -14LUFS or dB... after refactoring this should be customisable
         gain_adjust = -18.0 - float(i_loudness) - (float(i_loudrange) * 0.05)
         ffargs = argcheck_ffargs(" ".join(ffargs) + str(gain_adjust) + "dB")
-        
+
     cmd = [ Path(args.ffpath), '-y', '-i', Path(in_filepath) ]
     if not args.vff:
         cmd.extend([ '-loglevel', 'error' ])
@@ -271,12 +271,12 @@ with tempfile.TemporaryDirectory() as tempdir:
             for dirpath, dirnames, filenames in os.walk(args.input_dir):
                 if args.v:
                     print("Currently evaluating directory " + dirpath)
-                    
+
                 ignore_dir = str(args.ignore_dir)
                 if ignore_dir != '.' and ignore_dir in dirpath:
                     # Skip directory that is meant to be ignored
                     continue
-                    
+
                 out_dirpath = Path(args.output_dir, Path(dirpath).relative_to(args.input_dir))
                 out_dirpath.mkdir(exist_ok=True)
                 for name in sorted(filenames):
@@ -285,18 +285,18 @@ with tempfile.TemporaryDirectory() as tempdir:
                     if name.endswith(tuple(args.ifm)):
                         out_filepath = Path(out_dirpath, Path(name).stem + '.' + args.ofm)
                         convert_tasks.add(convertexecutor.submit(convert_file, in_filepath, out_filepath))
-                            
+
                     else:
                         # Copy file to destination
                         if args.v:
                             print("  Copying File: " + str(name))
                         copy_tasks.add(copyexecutor.submit(shutil.copyfile, in_filepath, Path(out_dirpath, name), follow_symlinks=False))
-                    
+
                     if not args.v:
                         print("{} files to copy, {} files to convert".format(len(copy_tasks), len(convert_tasks)), end='\r')
-                        
+
             print("\nFile evaluation finished")
-            
+
             # show progress
             if not args.v:
                 copies_completed = futures.as_completed(copy_tasks)
@@ -305,6 +305,6 @@ with tempfile.TemporaryDirectory() as tempdir:
                 for el in converts_completed:
                     current_convert += 1
                     print("{} out of {} files converted".format(current_convert, len(convert_tasks)), end='\r')
-            
+
             print("\nCompleted")
-        
+
