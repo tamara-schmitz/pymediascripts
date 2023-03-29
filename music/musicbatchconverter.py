@@ -163,8 +163,7 @@ if not args.ffargs and not args.preset:
 if args.preset == 1:
     # smaller
     args.ofm = argcheck_ofm("ogg")
-    args.ffargs = argcheck_ffargs("-map 0:v:0? -c:v libtheora -q:v 6 -map 0:a" +
-                                  " -c:a libvorbis -q:a 5 -ac 2")
+    args.ffargs = argcheck_ffargs("-hide_banner -c:v libtheora -q:v 8 -c:a libvorbis -q:a 5 -ac 2")
 if args.preset == 2:
     # compatible
     pop_element_from_list(args.ifm, "mp3")
