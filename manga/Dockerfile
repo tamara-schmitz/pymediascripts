@@ -7,7 +7,7 @@ RUN	zypper --gpg-auto-import-keys ref && zypper --non-interactive dup --allow-ve
 	zypper --non-interactive install --recommends --allow-vendor-change --allow-downgrade $ZYPPER_PACKAGES && \
 	zypper clean -a
 
-ADD musicbatchconverter.py /
+ADD imagesToPdf.py /
 
-ENTRYPOINT	["/musicbatchconverter.py"]
+ENTRYPOINT	["/imagesToPdf.py"]
 CMD		["-h"]
