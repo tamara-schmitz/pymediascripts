@@ -163,7 +163,8 @@ if not args.ffargs and not args.preset:
 if args.preset == 1:
     # smaller
     args.ofm = argcheck_ofm("ogg")
-    args.ffargs = argcheck_ffargs("-hide_banner -c:v libtheora -q:v 8 -c:a libvorbis -q:a 5 -ac 2")
+    args.ffargs = argcheck_ffargs("-hide_banner -c:v libtheora -q:v 8 -c:a libopus -b:a 192k -vbr constrained -ac 2")
+
 if args.preset == 2:
     # compatible
     pop_element_from_list(args.ifm, "mp3")
@@ -174,7 +175,7 @@ if args.preset == 2:
 if args.preset == 3:
     # dynamic_compressed
     args.ofm = argcheck_ofm("mka")
-    args.ffargs = argcheck_ffargs("-map 0" +
+    args.ffargs = argcheck_ffargs("-hide_banner -map 0" +
                                   " -c:a libopus -b:a 256k -vbr constrained -ac 2 -af aresample=osf=flt,dynaudnorm=r=-17dB" +
                                   " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
                                   " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99")
@@ -182,7 +183,7 @@ if args.preset == 3:
 if args.preset == 4:
     # normalized
     args.ofm = argcheck_ofm("mka")
-    args.ffargs = argcheck_ffargs("-map 0 -ac 2 -c copy" +
+    args.ffargs = argcheck_ffargs("-hide_banner -map 0 -ac 2 -c copy" +
                                   " -c:a libopus -b:a 256k -vbr constrained" +
                                   " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
                                   " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99" +
