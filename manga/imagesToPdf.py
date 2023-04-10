@@ -62,7 +62,6 @@ def exec_cmd(cmd, output=None):
 
 # Check for runtime dependencies
 try:
-    print("Testing if ImageMagick is available.")
     subprocess.call(["convert", "-version"], stdout=subprocess.PIPE, shell=False)
 
 except (subprocess.SubprocessError, FileNotFoundError) as e:
