@@ -23,7 +23,7 @@ def atoi(text):
     if not text:
         return ""
 
-    # try conversion to int then float then pass as string
+    # try conversion to float then pass as string
     try:
         return float(text)
     except ValueError:
@@ -124,7 +124,6 @@ with tempfile.TemporaryDirectory() as tempdir:
                     else:
                         # Let ImageMagick remove the transparancy from the PNG
                         no_alpha_filename = os.fsencode(os.path.join(tempdir, 'tmp%s.png'%str(tempdir_filecounter)))
-                        #no_alpha_filename = os.path.join(dirpath, name + os.fsencode('.noalpha'))
                         tempdir_filecounter += 1
                         cmd = [ 'convert', os.path.join(dirpath, name),
                                '-background', 'white', '-alpha', 'remove', '-alpha', 'off',
@@ -139,7 +138,6 @@ with tempfile.TemporaryDirectory() as tempdir:
                         # Let ImageMagick convert the file to JPG
                         jpg_of_webp_filename = os.fsencode(os.path.join(tempdir, 'tmp%s.jpg'%str(tempdir_filecounter)))
                         tempdir_filecounter += 1
-                        #jpg_of_webp_filename = os.path.join(dirpath, name + os.fsencode('.jpg'))
                         cmd = [ 'convert', os.path.join(dirpath, name),
                                '-background', 'white', '-quality', '90', '-colorspace', 'YUV',
                                '-define', 'jpeg:dct-method=float',
