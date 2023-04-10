@@ -261,7 +261,7 @@ with tempfile.TemporaryDirectory() as tempdir:
     with futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='copy') as copyexecutor:
         copy_tasks = set()
         # use threadpool for ffmpeg conversion as audio conversion is assumed to be singlethreaded 
-        with futures.ProcessPoolExecutor(max_workers=args.max_workers) as convertexecutor:
+        with futures.ThreadPoolExecutor(max_workers=args.max_workers) as convertexecutor:
             convert_tasks = set()
             print("Starting conversion of folder {} to folder {}".format(args.input_dir, args.output_dir))
             print("Files with the endings {} will be converted to {}".format(str(args.ifm), args.ofm))
