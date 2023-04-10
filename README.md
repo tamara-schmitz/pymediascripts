@@ -10,11 +10,11 @@ A GitHub CI regularly builds container images based on openSUSE Tumbleweed. To u
 ### Use the manga converter
 
 ```bash
-docker run --rm -it -v input_directory:/in:Z -v output_directory:/out:Z ghcr.io/tamara-schmitz/pymediascripts-manga /in /out/manga.pdf
+docker run --rm -it -v ./input_directory:/in:ro -v ./output_directory:/out:Z ghcr.io/tamara-schmitz/pymediascripts-manga /in /out/manga.pdf
 ```
 
 ### Use the music converter
 
 ```bash
-docker run --rm -it -v input_directory:/in:ro -v output_directory:/out:Z ghcr.io/tamara-schmitz/pymediascripts-music -p smaller /in /out
+docker run --rm -it -v ./input_directory:/in:ro -v ./output_directory:/out:Z ghcr.io/tamara-schmitz/pymediascripts-music -p smaller /in /out
 ```
