@@ -91,7 +91,7 @@ in_dir = os.fsencode(args.in_folder_name.strip())
 out_file = os.fsencode(args.out_pdf_name.strip())
 
 
-print("Working through directory " + args.in_folder_name + ". Output as " + args.out_pdf_name)
+print("Working through directory " + args.in_folder_name + ". Output as " + args.out_pdf_name + ". This may take a while...")
 
 if args.dry:
     args.v = True
