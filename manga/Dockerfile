@@ -1,6 +1,6 @@
 FROM registry.opensuse.org/opensuse/tumbleweed
 
-ENV ZYPPER_PACKAGES="ImageMagick \
+ENV ZYPPER_PACKAGES="ImageMagick pngcrush \
                      python3 python3-img2pdf"
 
 RUN	zypper --gpg-auto-import-keys ref && zypper --non-interactive dup --allow-vendor-change --allow-downgrade && \

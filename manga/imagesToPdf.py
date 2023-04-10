@@ -126,9 +126,9 @@ with tempfile.TemporaryDirectory() as tempdir:
                         no_alpha_filename = os.fsencode(os.path.join(tempdir, 'tmp%s.png'%str(tempdir_filecounter)))
                         #no_alpha_filename = os.path.join(dirpath, name + os.fsencode('.noalpha'))
                         tempdir_filecounter += 1
-                        cmd = [ 'convert', os.path.join(dirpath, name),
-                               '-background', 'white', '-alpha', 'remove', '-alpha', 'off',
-                               '-define', 'png:compression-level=9',
+                        cmd = [ 'pngcrush', os.path.join(dirpath, name),
+                               '-bkgd', '255', '255', '255', '-c', '2',
+                               '-brute', '-f', '0',
                                no_alpha_filename ]
                         executor.submit(exec_cmd, cmd)
                         in_files_list.append(no_alpha_filename)
