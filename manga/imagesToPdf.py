@@ -15,7 +15,9 @@ import img2pdf
 from concurrent import futures
 
 # Functions for natural sorting
-_regex_seps = re.compile(r"-+|_+|:+|,+|'+|’+|\|+|\[+|\]+|\(+|\)+")
+_regex_seps = re.compile(r"-+|_+|:+|,+|'+|’+|\|+|\[+|\]+|\(+|\)+|#+")
+_regex_volume = re.compile(r"^\s*volume|vol\.?")
+_regex_chapter = re.compile(r"\s*chapter|ch\.?")
 _regex_spaces = re.compile(r"\s+")
 _regex_split = re.compile(r"\s*(\d+(?:\.?\d+)?)\s*")
 def atoi(text):
@@ -38,6 +40,8 @@ def natural_keys(text):
     if isinstance(text, bytes):
         text = os.fsdecode(text)
     text = text.lower()
+    text = _regex_volume.sub("V ", text)
+    text = _regex_chapter.sub("C ", text)
     # replace special separators and duplicate whitespaces
     text = _regex_seps.sub(" ", text)
     text = _regex_spaces.sub(" ", text).strip()
