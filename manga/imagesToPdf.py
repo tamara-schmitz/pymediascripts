@@ -15,7 +15,7 @@ import img2pdf
 from concurrent import futures
 
 # Functions for natural sorting
-_regex_seps = re.compile(r"-+|_+|:+|,+|'+|\u02bc+|\u02b9+|\u02bd+|\u02be+|\u02bf+|\|+|\[+|\]+|\(+|\)+|#+")
+_regex_seps = re.compile(r"[-_:,'\u02bc\u02b9\u02bd\u02be\u02bf\|\[\]\(\)#]")
 _regex_volume = re.compile(r"^\s*volume|vol\.?")
 _regex_chapter = re.compile(r"\s*chapter|ch\.?")
 _regex_spaces = re.compile(r"\s+")
