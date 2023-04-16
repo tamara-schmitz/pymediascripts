@@ -88,6 +88,8 @@ def pop_element_from_list(li, el) -> list:
 def argcheck_ifm(string) -> list:
     if_mask = string.strip().split(',')
     for el in if_mask:
+        if el.startswith('.'):
+            el = el[1:]
         if not el.isalnum:
             print('Expected a list of file endings like: flac,wav,wave,mp3')
             raise argparse.ArgumentError()
@@ -100,6 +102,18 @@ def argcheck_ofm(string) -> str:
         print('Expected a file ending like: ogg')
         raise argparse.ArgumentError()
     return of_mask
+def argcheck_cfm(string) -> str:
+    cf_mask = string.strip()
+    if cf_mask == "*" or cf_mask == "all":
+        cf_mask = "*"
+    for el in cf_mask.split(','):
+        if el.startswith('.'):
+            el = el[1:]
+        if not el.isalnum:
+            print('Expected either \'*\', \'all\' or \
+                   a list of file endings like: \'url,png,jpg,bmp\'')
+            raise argparse.ArgumentError()
+    return cf_mask
 def argcheck_ffpath(string) -> str:
     ffpath = string.strip()
     if 'ffmpeg' not in ffpath:
@@ -161,6 +175,7 @@ try:
     parser.add_argument("--ignore-not-empty", action="store_true", help="continue even if the output directory contains files. This overwrites existing files.")
     parser.add_argument("-ifm", "--inputfilemask", dest="ifm", default="flac,wav,aif,aiff,ape,dsd,mp3,ogg,mka", type=argcheck_ifm, help="Filter mask defining which files will be converted. Other files are copied")
     parser.add_argument("-ofm", "--outputformat", dest="ofm", default="ogg", type=argcheck_ofm, help="Output format of converted files")
+    parser.add_argument("-cfm", "--copyfilemask", dest="cfm", default="*", type=argcheck_cfm, help="Do not copy files that match any entry in this list. * or all means do not copy any not-converted files.")
     parser.add_argument("-ffpath", "--ffmpegpath", dest="ffpath", default="ffmpeg", type=argcheck_ffpath, help="Path to ffmpeg")
     parser.add_argument("-ffargs", "--ffmpegarguments", dest="ffargs", type=argcheck_ffargs, help="Codec options to submit to ffmpeg")
     parser.add_argument("-max_workers", default=os.cpu_count(), type=int, help="Set max parallel converter tasks. By default is your CPU thread count.")
@@ -332,10 +347,15 @@ with tempfile.TemporaryDirectory() as tempdir:
                         convert_tasks.add(convertexecutor.submit(convert_file, in_filepath, out_filepath))
 
                     else:
-                        # Copy file to destination
-                        if args.v:
-                            print("  Copying File: " + str(name))
-                        copy_tasks.add(copyexecutor.submit(copy_file, in_filepath, Path(out_dirpath, name)))
+                        if args.cfm == '*':
+                            pass
+                        elif name.endswith(tuple(args.cfm)):
+                            pass
+                        else:
+                            # Copy file to destination
+                            if args.v:
+                                print("  Copying File: " + str(name))
+                            copy_tasks.add(copyexecutor.submit(copy_file, in_filepath, Path(out_dirpath, name)))
 
                     if not args.v:
                         print("{} files to copy, {} files to convert".format(len(copy_tasks), len(convert_tasks)), end='\r')
