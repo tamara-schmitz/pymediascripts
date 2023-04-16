@@ -15,7 +15,7 @@ import img2pdf
 from concurrent import futures
 
 # Functions for natural sorting
-_regex_seps = re.compile(r"-+|_+|:+|,+|'+|’+|\|+|\[+|\]+|\(+|\)+|#+")
+_regex_seps = re.compile(r"-+|_+|:+|,+|'+|\u02bc+|\u02b9+|\u02bd+|\u02be+|\u02bf+|\|+|\[+|\]+|\(+|\)+|#+")
 _regex_volume = re.compile(r"^\s*volume|vol\.?")
 _regex_chapter = re.compile(r"\s*chapter|ch\.?")
 _regex_spaces = re.compile(r"\s+")
@@ -130,8 +130,9 @@ with tempfile.TemporaryDirectory() as tempdir:
                         no_alpha_filename = os.fsencode(os.path.join(tempdir, 'tmp%s.png'%str(tempdir_filecounter)))
                         tempdir_filecounter += 1
                         cmd = [ 'convert', os.path.join(dirpath, name),
-                               '-background', 'white', '-alpha', 'remove', '-alpha', 'off',
+                               '-background', 'white', '-alpha', 'remove',
                                '-define', 'png:compression-level=9',
+                               '-strip', '-auto-orient',
                                no_alpha_filename ]
                         executor.submit(exec_cmd, cmd)
                         in_files_list.append(no_alpha_filename)
@@ -143,8 +144,10 @@ with tempfile.TemporaryDirectory() as tempdir:
                         jpg_of_webp_filename = os.fsencode(os.path.join(tempdir, 'tmp%s.jpg'%str(tempdir_filecounter)))
                         tempdir_filecounter += 1
                         cmd = [ 'convert', os.path.join(dirpath, name),
-                               '-background', 'white', '-quality', '90', '-colorspace', 'YUV',
+                               '-background', 'white', '-alpha', 'remove',
+                               '-quality', '90', '-colorspace', 'YUV',
                                '-define', 'jpeg:dct-method=float',
+                               '-strip', '-auto-orient',
                                jpg_of_webp_filename ]
                         executor.submit(exec_cmd, cmd)
                         in_files_list.append(jpg_of_webp_filename)
