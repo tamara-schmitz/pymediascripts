@@ -5,6 +5,7 @@
 import os
 import shutil
 from pathlib import Path
+import unicodedata
 import textwrap
 import argparse
 import sys
@@ -37,6 +38,37 @@ def random_string(length: int) -> str:
     for num in range(length):
         rnd_str += random.choice(chars)
     return rnd_str
+
+def make_fat32_compatible(file_path: Path) -> Path:
+    # Define a regular expression pattern for illegal characters
+    illegal_chars_pattern = re.compile(r'[<>:"/\\|?*\u0000-\u001F\u007F-\u009F]')
+
+    # Replace any illegal characters and unsupported Unicode characters with valid ones
+    fat32_compatible_path = []
+
+    # Evalute each blob of the path
+    for element in file_path.parts:
+        if element == file_path.anchor:
+            fat32_compatible_path.append(element)
+        else:
+            element_str = ""
+            for char in element:
+                if illegal_chars_pattern.match(char):
+                    element_str += '_'
+                elif unicodedata.category(char) in ['Mn', 'Me', 'Cf', 'Cc']:
+                    # Ignore combining, enclosing, formatting, and control characters
+                    pass
+                elif ord(char) > 0xFFFF:
+                    # Ignore characters beyond the BMP
+                    pass
+                else:
+                    element_str += char
+
+            # Ensure that the resulting path doesn't exceed the maximum length limit of FAT32
+            element_str = element_str.strip()[:255]
+            fat32_compatible_path.append(element_str)
+
+    return Path(*fat32_compatible_path)
 
 # Argument custom validators
 def remove_empty_from_list(li):
@@ -135,6 +167,7 @@ try:
     parser.add_argument("-v", "--verbose", dest="v", help="Verbose mode", action="store_true")
     parser.add_argument("-vff", "--verboseffmpeg", dest="vff", help="Verbose mode for ffmpeg", action="store_true")
     parser.add_argument("-p", "--preset", default="", type=argcheck_preset, help="Set a preset that overwrites other arguments. Possible values: smaller, compatible, dynamic_compressed, normalized, flac, cd-flac")
+    parser.add_argument("-fat", "--fat32-compatible", dest="fat", help="Ensure that paths and filenames are compliant with FAT32 filesystems", action="store_true")
 
     args = parser.parse_args()
 
@@ -226,7 +259,16 @@ def extract_coverart(in_filepath: Path, tempdir: Path) -> Path:
                 return cpath
     return None
 
-def convert_file(in_filepath, out_filepath):
+def copy_file(in_filepath: Path, out_filepath: Path) -> Path:
+    if args.fat:
+        out_filepath = make_fat32_compatible(out_filepath)
+
+    shutil.copyfile(in_filepath, out_filepath, follow_symlinks=False)
+
+def convert_file(in_filepath: Path, out_filepath: Path) -> Path:
+    if args.fat:
+        out_filepath = make_fat32_compatible(out_filepath)
+
     ffargs = args.ffargs
     if args.preset == 4:
         #TODO move this to somewhere else, not as a preset
@@ -278,6 +320,9 @@ with tempfile.TemporaryDirectory() as tempdir:
                     continue
 
                 out_dirpath = Path(args.output_dir, Path(dirpath).relative_to(args.input_dir))
+                if args.fat:
+                    out_dirpath = make_fat32_compatible(out_dirpath)
+
                 out_dirpath.mkdir(exist_ok=True)
                 for name in sorted(filenames):
                     in_filepath = Path(dirpath, name)
@@ -290,7 +335,7 @@ with tempfile.TemporaryDirectory() as tempdir:
                         # Copy file to destination
                         if args.v:
                             print("  Copying File: " + str(name))
-                        copy_tasks.add(copyexecutor.submit(shutil.copyfile, in_filepath, Path(out_dirpath, name), follow_symlinks=False))
+                        copy_tasks.add(copyexecutor.submit(copy_file, in_filepath, Path(out_dirpath, name)))
 
                     if not args.v:
                         print("{} files to copy, {} files to convert".format(len(copy_tasks), len(convert_tasks)), end='\r')
