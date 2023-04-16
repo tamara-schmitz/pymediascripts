@@ -40,8 +40,9 @@ def natural_keys(text):
     if isinstance(text, bytes):
         text = os.fsdecode(text)
     text = text.lower()
-    text = _regex_volume.sub("V ", text)
-    text = _regex_chapter.sub("C ", text)
+    # ensure Volumes and Chapter markers come before specials
+    text = _regex_volume.sub("0V ", text)
+    text = _regex_chapter.sub("0C ", text)
     # replace special separators and duplicate whitespaces
     text = _regex_seps.sub(" ", text)
     text = _regex_spaces.sub(" ", text).strip()
