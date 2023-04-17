@@ -232,7 +232,7 @@ if args.preset == 4:
     # normalized
     args.ofm = argcheck_ofm("mka")
     args.ffargs = argcheck_ffargs("-hide_banner -map 0 -ac 2 -c copy" +
-                                  " -c:a libopus -b:a 256k -vbr 2 -frame_duration 60" +
+                                  " -c:a libopus -b:a 192k -vbr 2 -frame_duration 60" +
                                   " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
                                   " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99" +
                                   " -af aresample=osf=flt:osr=48000:filter_type=kaiser,alimiter=limit=-1.0dB:level=off:attack=5:release=25:level_in=")
