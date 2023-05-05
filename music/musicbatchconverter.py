@@ -46,7 +46,7 @@ def make_fat32_compatible(file_path: Path) -> Path:
     # Replace any illegal characters and unsupported Unicode characters with valid ones
     fat32_compatible_path = []
 
-    # Evalute each blob of the path
+    # Evaluate each blob of the path
     for element in file_path.parts:
         if element == file_path.anchor:
             fat32_compatible_path.append(element)
@@ -86,7 +86,7 @@ def pop_element_from_list(li, el) -> list:
     return li
 
 def argcheck_ifm(string) -> list:
-    if_mask = string.strip().split(',')
+    if_mask = string.strip().lower().split(',')
     for el in if_mask:
         if el.startswith('.'):
             el = el[1:]
@@ -95,7 +95,7 @@ def argcheck_ifm(string) -> list:
             raise argparse.ArgumentError()
     return list(remove_empty_from_list(if_mask))
 def argcheck_ofm(string) -> str:
-    of_mask = string.strip()
+    of_mask = string.strip().lower()
     if of_mask.startswith('.'):
         of_mask = of_mask[1:]
     if not of_mask.isalnum:
@@ -103,7 +103,7 @@ def argcheck_ofm(string) -> str:
         raise argparse.ArgumentError()
     return of_mask
 def argcheck_cfm(string) -> str:
-    cf_mask = string.strip()
+    cf_mask = string.strip().lower()
     if cf_mask == "*" or cf_mask == "all":
         cf_mask = "*"
     for el in cf_mask.split(','):
@@ -342,14 +342,14 @@ with tempfile.TemporaryDirectory() as tempdir:
                 for name in sorted(filenames):
                     in_filepath = Path(dirpath, name)
                     # Evaluate file
-                    if name.endswith(tuple(args.ifm)):
+                    if name.lower().endswith(tuple(args.ifm)):
                         out_filepath = Path(out_dirpath, Path(name).stem + '.' + args.ofm)
                         convert_tasks.add(convertexecutor.submit(convert_file, in_filepath, out_filepath))
 
                     else:
                         if args.cfm == '*':
                             pass
-                        elif name.endswith(tuple(args.cfm)):
+                        elif name.lower().endswith(tuple(args.cfm)):
                             pass
                         else:
                             # Copy file to destination
