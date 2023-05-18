@@ -58,7 +58,13 @@ def exec_cmd(cmd, output=None):
         si = subprocess.STARTUPINFO()
         si.dwFlags = subprocess.BELOW_NORMAL_PRIORITY_CLASS
         return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT, startupinfo=si)
-    elif sys.platform == 'linux' or sys.platform == 'darwin':
+    elif sys.platform == 'linux':
+        cmd.insert(0, "chrt")
+        cmd.insert(1, "-b")
+        cmd.insert(2, "0")
+        cmd.insert(3, "nice")
+        cmd.insert(4, "-n19")
+    elif sys.platform == 'darwin':
         cmd.insert(0, "nice")
         cmd.insert(1, "-n19")
         return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT)
