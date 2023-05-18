@@ -24,6 +24,8 @@ def exec_cmd(cmd, output=None):
         # TODO this does not appear to work at this time
         si = subprocess.STARTUPINFO()
         si.dwFlags = subprocess.BELOW_NORMAL_PRIORITY_CLASS
+        if args.v:
+            print("  Executing command: {}".format(cmd))
         return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT, startupinfo=si)
     elif sys.platform == 'linux':
         cmd.insert(0, "chrt")
@@ -31,11 +33,18 @@ def exec_cmd(cmd, output=None):
         cmd.insert(2, "0")
         cmd.insert(3, "nice")
         cmd.insert(4, "-n19")
+        if args.v:
+            print("  Executing command: {}".format(cmd))
+        return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT)
     elif sys.platform == 'darwin':
         cmd.insert(0, "nice")
         cmd.insert(1, "-n19")
+        if args.v:
+            print("  Executing command: {}".format(cmd))
         return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT)
     else:
+        if args.v:
+            print("  Executing command: {}".format(cmd))
         return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT)
 
 def random_string(length: int) -> str:
@@ -314,8 +323,6 @@ def convert_file(in_filepath: Path, out_filepath: Path) -> Path:
         cmd.extend([ '-loglevel', 'error' ])
     cmd.extend(ffargs)
     cmd.append(Path(out_filepath))
-    if args.v:
-        print("  Executing ffmpeg command: {}".format(cmd))
     exec_cmd(cmd)
 
 # setup temporary directory for intermediary steps
