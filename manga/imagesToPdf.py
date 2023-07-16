@@ -172,4 +172,4 @@ with tempfile.TemporaryDirectory() as tempdir:
         # Create PDF
         print("Creating actual PDF file.")
         with open(out_file, "wb") as outfhandle:
-            outfhandle.write(img2pdf.convert(in_files_list, with_pdfrw=False))
+            outfhandle.write(img2pdf.convert(in_files_list, with_pdfrw=False, rotation=img2pdf.Rotation.ifvalid))
