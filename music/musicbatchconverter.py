@@ -27,16 +27,7 @@ def exec_cmd(cmd, output=None):
         if args.v:
             print("  Executing command: {}".format(cmd))
         return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT, startupinfo=si)
-    elif sys.platform == 'linux':
-        cmd.insert(0, "chrt")
-        cmd.insert(1, "-b")
-        cmd.insert(2, "0")
-        cmd.insert(3, "nice")
-        cmd.insert(4, "-n19")
-        if args.v:
-            print("  Executing command: {}".format(cmd))
-        return subprocess.run(cmd, shell=False, stdout=output, stderr=subprocess.STDOUT)
-    elif sys.platform == 'darwin':
+    elif sys.platform == 'linux' or sys.platform == 'darwin':
         cmd.insert(0, "nice")
         cmd.insert(1, "-n19")
         if args.v:
