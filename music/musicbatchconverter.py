@@ -21,7 +21,7 @@ def exec_cmd(cmd, output=None):
         cmd = cmd.split(' ')
 
     if sys.platform == 'win32':
-        # TODO this does not appear to work at this time
+        # TODO priority does not appear to be set properly
         si = subprocess.STARTUPINFO()
         si.dwFlags = subprocess.BELOW_NORMAL_PRIORITY_CLASS
         if args.v:
@@ -198,6 +198,8 @@ try:
     parser.add_argument("-vff", "--verboseffmpeg", dest="vff", help="Verbose mode for ffmpeg", action="store_true")
     parser.add_argument("-p", "--preset", default="", type=argcheck_preset, help="Set a preset that overwrites other arguments. Possible values: smaller, compatible, dynamic_compressed, normalized, flac, cd-flac")
     parser.add_argument("-fat", "--fat32-compatible", dest="fat", help="Ensure that paths and filenames are compliant with FAT32 filesystems", action="store_true")
+    parser.add_argument("--no-extract-coverart", dest="nocover", help="Skip the extraction of cover art from metadata", action="store_true")
+    parser.add_argument("--always-extract-coverart", dest="alwayscover", help="Always extract cover art from metadata even if existing cover art was found", action="store_true")
 
     args = parser.parse_args()
 
@@ -238,7 +240,7 @@ if args.preset == 2:
 if args.preset == 3:
     # dynamic_compressed
     args.ofm = argcheck_ofm("mka")
-    args.ffargs = argcheck_ffargs("-hide_banner -map 0" +
+    args.ffargs = argcheck_ffargs("-hide_banner -map 0:a -ac 2 -c copy" +
                                   " -c:a libopus -b:a 192k -vbr 2 -frame_duration 60 -ac 2 -af aresample=osf=flt,dynaudnorm=r=-17dB" +
                                   " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
                                   " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99")
@@ -246,11 +248,11 @@ if args.preset == 3:
 if args.preset == 4:
     # normalized
     args.ofm = argcheck_ofm("mka")
-    args.ffargs = argcheck_ffargs("-hide_banner -map 0 -ac 2 -c copy" +
+    args.ffargs = argcheck_ffargs("-hide_banner -map 0:a -ac 2 -c copy" +
                                   " -c:a libopus -b:a 192k -vbr 2 -frame_duration 60" +
                                   " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
                                   " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99" +
-                                  " -af aresample=osf=flt:osr=48000:filter_type=kaiser,alimiter=limit=-1.0dB:level=off:attack=5:release=25:level_in=")
+                                  " -af aresample=osf=flt:osr=48000:filter_type=kaiser,alimiter=limit=-1.0dB:level=off:attack=2:release=50:level_in=")
 
 if args.preset == 11:
     # Flac
@@ -271,22 +273,30 @@ def extract_coverart(in_filepath: Path, tempdir: Path) -> Path:
     @params
     @returns path_to_coverart
     '''
+
+    # search for coverart in parent folder
+    if not args.alwayscover:
+        # the order is respected and represents priorities
+        iter_coverart_names = ('Folder.jpg', 'folder.jpg', 'Folder.png', 'folder.png',
+                               'Cover.jpg', 'cover.jpg', 'Cover.png', 'cover.png',
+                               'Album.jpg', 'album.jpg', 'Album.png', 'album.png',
+                               'Thumb.jpg', 'AlbumArtSmall.jpg')
+        for child in in_filepath.parent.iterdir():
+            for cname in iter_coverart_names:
+                cpath = child.joinpath(cname)
+                if cpath.exists():
+                    return cpath
+
     # extract coverart from source if possible
     if in_filepath.exists() :
         cpath = Path(tempdir).joinpath(random_string(20) + '.jpg')
         cmd = [ Path(args.ffpath), '-y', '-i', Path(in_filepath) ]
         cmd.extend(["-map", "0:v", "-q:v", "5", cpath])
+        if not args.vff:
+            cmd.extend([ '-loglevel', 'error' ])
         exec_cmd(cmd)
         return cpath
 
-    # search for coverart in parent folder
-    iter_coverart_names = ('Folder.jpg', 'folder.jpg', 'Folder.png', 'folder.png', 'Cover.jpg', 'cover.jpg',
-                           'Cover.png', 'cover.png', 'Album.jpg', 'album.jpg', 'Album.png', 'album.png')
-    for child in in_filepath.parent.iterdir():
-        for cname in iter_coverart_names:
-            cpath = child.joinpath(cname)
-            if cpath.exists():
-                return cpath
     return None
 
 def copy_file(in_filepath: Path, out_filepath: Path) -> Path:
@@ -313,9 +323,10 @@ def convert_file(in_filepath: Path, out_filepath: Path) -> Path:
         i_loudrange = re.search("Loudness\srange\:\s+LRA\:\s+(\d+\.?\d*)", ana_result).groups()[0]
 
         # difference between target integrated LUFS and original vol
-        # dynamic music will get lowered
+        # dynamic music will get a slight volume boost
         # ReplayGain and Spotify target is actually around -14LUFS or dB... after refactoring this should be customisable
-        gain_adjust = -18.0 - float(i_loudness) - (float(i_loudrange) * 0.05)
+        # -18LUFS is about the nominal of ReplayGain
+        gain_adjust = -18.0 - float(i_loudness) + (float(i_loudrange) * 0.25)
         ffargs = argcheck_ffargs(" ".join(ffargs) + str(gain_adjust) + "dB")
 
     cmd = [ Path(args.ffpath), '-y', '-i', Path(in_filepath) ]
@@ -325,13 +336,13 @@ def convert_file(in_filepath: Path, out_filepath: Path) -> Path:
     cmd.append(Path(out_filepath))
     exec_cmd(cmd)
 
-# setup temporary directory for intermediary steps
+    # setup temporary directory for intermediary steps
 with tempfile.TemporaryDirectory() as tempdir:
     # use thread queue for copying to ensure that long copy operations do not starve the conversion task pool
     with futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='copy') as copyexecutor:
         copy_tasks = set()
         # use threadpool for ffmpeg conversion as audio conversion is assumed to be singlethreaded 
-        with futures.ThreadPoolExecutor(max_workers=args.max_workers) as convertexecutor:
+        with futures.ThreadPoolExecutor(max_workers=args.max_workers, thread_name_prefix='converter') as convertexecutor:
             convert_tasks = set()
             print("Starting conversion of folder {} to folder {}".format(args.input_dir, args.output_dir))
             print("Files with the endings {} will be converted to {}".format(str(args.ifm), args.ofm))
@@ -352,13 +363,21 @@ with tempfile.TemporaryDirectory() as tempdir:
                     out_dirpath = make_fat32_compatible(out_dirpath)
 
                 out_dirpath.mkdir(exist_ok=True)
+
+                currfolder_hascoverart = False
                 for name in sorted(filenames):
                     in_filepath = Path(dirpath, name)
                     # Evaluate file
                     if name.lower().endswith(tuple(args.ifm)):
                         out_filepath = Path(out_dirpath, Path(name).stem + '.' + args.ofm)
                         convert_tasks.add(convertexecutor.submit(convert_file, in_filepath, out_filepath))
-
+                        if not args.nocover and not currfolder_hascoverart:
+                            coverpath = extract_coverart(in_filepath, tempdir)
+                            if isinstance(coverpath, Path):
+                                if args.v:
+                                    print("  copying cover art " + str(coverpath) + " of " + str(name))
+                                copy_tasks.add(copyexecutor.submit(copy_file, coverpath, Path(out_dirpath, "cover" + coverpath.suffix)))
+                                currfolder_hascoverart = True
                     else:
                         if args.cfm == '*':
                             pass
@@ -367,8 +386,8 @@ with tempfile.TemporaryDirectory() as tempdir:
                         else:
                             # Copy file to destination
                             if args.v:
-                                print("  Copying File: " + str(name))
-                            copy_tasks.add(copyexecutor.submit(copy_file, in_filepath, Path(out_dirpath, name)))
+                                print("  copying file: " + str(name))
+                            copy_tasks.add(copyexecutor.submit(copy_file, in_filepath, path(out_dirpath, name)))
 
                     if not args.v:
                         print("{} files to copy, {} files to convert".format(len(copy_tasks), len(convert_tasks)), end='\r')
