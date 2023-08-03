@@ -326,7 +326,8 @@ def convert_file(in_filepath: Path, out_filepath: Path) -> Path:
         # dynamic music will get a slight volume boost
         # ReplayGain and Spotify target is actually around -14LUFS or dB... after refactoring this should be customisable
         # -18LUFS is about the nominal of ReplayGain
-        gain_adjust = -18.0 - float(i_loudness) + (float(i_loudrange) * 0.25)
+        #gain_adjust = -18.0 - float(i_loudness) + (float(i_loudrange) * 0.25)
+        gain_adjust = -18.0 - float(i_loudness)
         ffargs = argcheck_ffargs(" ".join(ffargs) + str(gain_adjust) + "dB")
 
     cmd = [ Path(args.ffpath), '-y', '-i', Path(in_filepath) ]
