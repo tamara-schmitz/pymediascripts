@@ -285,8 +285,8 @@ def extract_coverart(in_filepath: Path, tempdir: Path) -> Path:
         cmd.extend(["-map", "0:v", "-q:v", "5", cpath])
         if not args.vff:
             cmd.extend([ '-loglevel', 'error' ])
-        exec_cmd(cmd)
-        return cpath
+        if exec_cmd(cmd).returncode == 0:
+            return cpath
 
     return None
 
