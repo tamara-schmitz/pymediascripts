@@ -143,6 +143,8 @@ def argcheck_preset(string) -> int:
         return 3
     elif string == "normalized":
         return 4
+    elif string == "cd-wav":
+        return 10
     elif string == "flac":
         return 11
     elif string == "cd-flac":
@@ -187,7 +189,8 @@ try:
     parser.add_argument("-max_workers", default=os.cpu_count(), type=int, help="Set max parallel converter tasks. By default is your CPU thread count.")
     parser.add_argument("-v", "--verbose", dest="v", help="Verbose mode", action="store_true")
     parser.add_argument("-vff", "--verboseffmpeg", dest="vff", help="Verbose mode for ffmpeg", action="store_true")
-    parser.add_argument("-p", "--preset", default="", type=argcheck_preset, help="Set a preset that overwrites other arguments. Possible values: smaller, compatible, dynamic_compressed, normalized, flac, cd-flac")
+    parser.add_argument("-p", "--preset", default="", type=argcheck_preset,
+                        help="Set a preset that overwrites other arguments. Possible values: smaller, compatible, dynamic_compressed, normalized, cd-wav, flac, cd-flac")
     parser.add_argument("-fat", "--fat32-compatible", dest="fat", help="Ensure that paths and filenames are compliant with FAT32 filesystems", action="store_true")
     parser.add_argument("--no-extract-coverart", dest="nocover", help="Skip the extraction of cover art from metadata", action="store_true")
     parser.add_argument("--always-extract-coverart", dest="alwayscover", help="Always extract cover art from metadata even if existing cover art was found", action="store_true")
@@ -244,6 +247,13 @@ if args.preset == 4:
                                   " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
                                   " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99" +
                                   " -af aresample=osf=flt:osr=192000:filter_type=kaiser,alimiter=limit=-1.0dB:level=off:attack=2:release=50:level_in=")
+
+if args.preset == 10:
+    # CD-Wav
+    args.ifm.append("flac")
+    args.ofm = argcheck_ofm("wav")
+    if not args.ffargs:
+        args.ffargs = argcheck_ffargs(" -c:a pcm_s16le -af aresample=osf=flt,alimiter=limit=-1dB:level=off:attack=2.5:release=15,aresample=osr=44100:resampler=swr:filter_type=kaiser:osf=s16:dither_method=triangular_hp ")
 
 if args.preset == 11:
     # Flac
