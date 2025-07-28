@@ -185,7 +185,7 @@ try:
     parser.add_argument("-e", "--cjxleffort", dest="cjxleffort", default=0, type=int, help="CJXL's effort into compressing files. Goes from 1 to 9, low to high.")
     parser.add_argument("-max_workers", default=os.cpu_count(), type=int, help="Set max parallel converter tasks. By default is your CPU thread count.")
     parser.add_argument("-v", "--verbose", dest="v", help="Verbose mode", action="store_true")
-    parser.add_argument("-vv", "--allverbose", dest="vv", help="Verbose mode for ffmpeg", action="store_true")
+    parser.add_argument("-vv", "--allverbose", dest="vv", help="Verbose mode for cjxl", action="store_true")
     parser.add_argument("-p", "--preset", default="", type=argcheck_preset,
                         help="Set a preset that overwrites other arguments. Possible values: visual_lossless, true_lossless, balanced")
     parser.add_argument("-fat", "--fat32-compatible", dest="fat", help="Ensure that paths and filenames are compliant with FAT32 filesystems", action="store_true")
@@ -210,7 +210,7 @@ if not args.ignore_not_empty and not args.ignore_not_empty_and_preserve and args
     exit(-1)
 
 if not args.cjxlargs and not args.preset:
-    print("You neither selected a preset nor set any ffmpeg arguments. Selecting the balanced preset for you...")
+    print("You neither selected a preset nor set any cjxl arguments. Selecting the balanced preset for you...")
     args.preset = 3
 
 # apply preset
@@ -263,7 +263,7 @@ def convert_file(in_filepath: Path, out_filepath: Path) -> Path:
 # use thread queue for copying to ensure that long copy operations do not starve the conversion task pool
 with futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='copy') as copyexecutor:
     copy_tasks = set()
-    # use threadpool for ffmpeg conversion as audio conversion is assumed to be singlethreaded 
+    # use threadpool for jxl conversion
     with futures.ThreadPoolExecutor(max_workers=args.max_workers, thread_name_prefix='converter') as convertexecutor:
         convert_tasks = set()
 
