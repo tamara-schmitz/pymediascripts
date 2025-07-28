@@ -10,7 +10,6 @@ import textwrap
 import argparse
 import sys
 import subprocess
-import tempfile
 import random
 import string
 import re
@@ -120,6 +119,12 @@ def argcheck_cfm(string) -> str:
                    a list of file endings like: \'url,png,mp4\'')
             raise argparse.ArgumentError()
     return cf_mask
+def argcheck_ms(string) -> int:
+    if string == "0":
+        return 0
+    # TODO!
+    # https://github.com/xolox/python-humanfriendly
+    return 0
 def argcheck_cjxlpath(string) -> str:
     cjxlpath = string.strip()
     if 'cjxl' not in cjxlpath: # also check if path exists
@@ -174,6 +179,7 @@ try:
     parser.add_argument("-ifm", "--inputfilemask", dest="ifm", default="png,jpg,jpeg,jfif,pjpeg,pjp,avif,webp,bmp,apng,gif,tiff,tif", type=argcheck_ifm, help="Filter mask defining which files will be converted. Other files are copied")
     parser.add_argument("-ofm", "--outputformat", dest="ofm", default="jxl", type=argcheck_ofm, help="Output format of converted files")
     parser.add_argument("-cfm", "--copyfilemask", dest="cfm", default="*", type=argcheck_cfm, help="Do not copy files that match any entry in this list. * or all means do not copy any not-converted files.")
+    parser.add_argument("-ms", "--minimumfilesize", dest="minimumfilesize", default="0", type=argcheck_ms, help="Do not convert but copy files that are smaller than given filesize. Example: 100KiB or 1MiB")
     parser.add_argument("-cjxlpath", "--cjxlpath", dest="cjxlpath", default="cjxl", type=argcheck_cjxlpath, help="Path to cjxl")
     parser.add_argument("-cjxlargs", "--cjxlarguments", dest="cjxlargs", type=argcheck_cjxlargs, help="Codec options to submit to cjxl. Choosing a preset overwrites these.")
     parser.add_argument("-e", "--cjxleffort", dest="cjxleffort", default=0, type=int, help="CJXL's effort into compressing files. Goes from 1 to 9, low to high.")
@@ -254,69 +260,69 @@ def convert_file(in_filepath: Path, out_filepath: Path) -> Path:
     cmd.extend(args.cjxlargs)
     exec_cmd(cmd)
 
-    # setup temporary directory for intermediary steps
-with tempfile.TemporaryDirectory() as tempdir:
-    # use thread queue for copying to ensure that long copy operations do not starve the conversion task pool
-    with futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='copy') as copyexecutor:
-        copy_tasks = set()
-        # use threadpool for ffmpeg conversion as audio conversion is assumed to be singlethreaded 
-        with futures.ThreadPoolExecutor(max_workers=args.max_workers, thread_name_prefix='converter') as convertexecutor:
-            convert_tasks = set()
+# use thread queue for copying to ensure that long copy operations do not starve the conversion task pool
+with futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='copy') as copyexecutor:
+    copy_tasks = set()
+    # use threadpool for ffmpeg conversion as audio conversion is assumed to be singlethreaded 
+    with futures.ThreadPoolExecutor(max_workers=args.max_workers, thread_name_prefix='converter') as convertexecutor:
+        convert_tasks = set()
 
-            # if you passed ignore_not_empty, we don't want to run into a loop and reconvert pics we already converted
-            if args.input_dir.resolve() == args.output_dir.resolve():
-                pop_element_from_list(args.ifm, args.ofm)
-            
-            print("Starting conversion of folder {} to folder {}".format(args.input_dir, args.output_dir))
-            print("Files with the endings {} will be converted to {}".format(str(args.ifm), args.ofm))
-            print("Codec options to be passed to cjxl: ", str.join(' ', args.cjxlargs))
-            print()
+        # if you passed ignore_not_empty, we don't want to run into a loop and reconvert pics we already converted
+        if args.input_dir.resolve() == args.output_dir.resolve():
+            pop_element_from_list(args.ifm, args.ofm)
+        
+        print("Starting conversion of folder {} to folder {}".format(args.input_dir, args.output_dir))
+        print("Files with the endings {} will be converted to {}".format(str(args.ifm), args.ofm))
+        print("Codec options to be passed to cjxl: ", str.join(' ', args.cjxlargs))
+        print()
 
-            for dirpath, dirnames, filenames in os.walk(args.input_dir):
-                if args.v:
-                    print("Currently evaluating directory " + dirpath)
+        for dirpath, dirnames, filenames in os.walk(args.input_dir):
+            if args.v:
+                print("Currently evaluating directory " + dirpath)
 
-                ignore_dir = str(args.ignore_dir)
-                if ignore_dir != '.' and ignore_dir in dirpath:
-                    # Skip directory that is meant to be ignored
-                    continue
+            ignore_dir = str(args.ignore_dir)
+            if ignore_dir != '.' and ignore_dir in dirpath:
+                # Skip directory that is meant to be ignored
+                continue
 
-                out_dirpath = Path(args.output_dir, Path(dirpath).relative_to(args.input_dir))
-                if args.fat:
-                    out_dirpath = make_fat32_compatible(out_dirpath)
+            out_dirpath = Path(args.output_dir, Path(dirpath).relative_to(args.input_dir))
+            if args.fat:
+                out_dirpath = make_fat32_compatible(out_dirpath)
 
-                out_dirpath.mkdir(exist_ok=True)
+            out_dirpath.mkdir(exist_ok=True)
 
-                for name in sorted(filenames):
-                    in_filepath = Path(dirpath, name)
-                    # Evaluate file
-                    if name.lower().endswith(tuple(args.ifm)):
-                        out_filepath = Path(out_dirpath, Path(name).stem + '.' + args.ofm)
-                        convert_tasks.add(convertexecutor.submit(convert_file, in_filepath, out_filepath))
+            for name in sorted(filenames):
+                in_filepath = Path(dirpath, name)
+                # Evaluate file
+                if name.lower().endswith(tuple(args.ifm)):
+                    out_filepath = Path(out_dirpath, Path(name).stem + '.' + args.ofm)
+                    if minimumfilesize > 0 and minimumfilesize > in_filepath.stat().st_size:
+                        copy_tasks.add(copyexecutor.submit(copy_file, in_filepath, out_filepath))
                     else:
-                        if args.cfm == '*':
-                            pass
-                        elif name.lower().endswith(tuple(args.cfm)):
-                            pass
-                        else:
-                            # Copy file to destination
-                            if args.v:
-                                print("  copying file: " + str(name))
-                            copy_tasks.add(copyexecutor.submit(copy_file, in_filepath, path(out_dirpath, name)))
+                        convert_tasks.add(convertexecutor.submit(convert_file, in_filepath, out_filepath))
+                else:
+                    if args.cfm == '*':
+                        pass
+                    elif name.lower().endswith(tuple(args.cfm)):
+                        pass
+                    else:
+                        # Copy file to destination
+                        if args.v:
+                            print("  copying file: " + str(name))
+                        copy_tasks.add(copyexecutor.submit(copy_file, in_filepath, path(out_dirpath, name)))
 
-                    if not args.v:
-                        print("{} files to copy, {} files to convert".format(len(copy_tasks), len(convert_tasks)), end='\r')
+                if not args.v:
+                    print("{} files to copy, {} files to convert".format(len(copy_tasks), len(convert_tasks)), end='\r')
 
-            print("\nFile evaluation finished")
+        print("\nFile evaluation finished")
 
-            # show progress
-            if not args.v:
-                copies_completed = futures.as_completed(copy_tasks)
-                converts_completed = futures.as_completed(convert_tasks)
-                current_convert = 0
-                for el in converts_completed:
-                    current_convert += 1
-                    print("{} out of {} files converted".format(current_convert, len(convert_tasks)), end='\r')
+        # show progress
+        if not args.v:
+            copies_completed = futures.as_completed(copy_tasks)
+            converts_completed = futures.as_completed(convert_tasks)
+            current_convert = 0
+            for el in converts_completed:
+                current_convert += 1
+                print("{} out of {} files converted".format(current_convert, len(convert_tasks)), end='\r')
 
-            print("\nCompleted")
-
+        print("\nCompleted")
