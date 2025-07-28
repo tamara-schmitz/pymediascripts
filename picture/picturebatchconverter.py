@@ -170,6 +170,7 @@ try:
     parser.add_argument("output_dir", type=Path, help="output folder. Use \\ or \" for names with spaces")
     parser.add_argument("--ignore-dir", type=Path, help="Ignore directory with the specified folder name.")
     parser.add_argument("--ignore-not-empty", action="store_true", help="continue even if the output directory contains files. This overwrites existing files.")
+    parser.add_argument("--ignore-not-empty-and-preserve",action="store_true", help="continue even if the output directory contains files. Skip existing files with the same name.")
     parser.add_argument("-ifm", "--inputfilemask", dest="ifm", default="png,jpg,jpeg,jfif,pjpeg,pjp,avif,webp,bmp,apng,gif,tiff,tif", type=argcheck_ifm, help="Filter mask defining which files will be converted. Other files are copied")
     parser.add_argument("-ofm", "--outputformat", dest="ofm", default="jxl", type=argcheck_ofm, help="Output format of converted files")
     parser.add_argument("-cfm", "--copyfilemask", dest="cfm", default="*", type=argcheck_cfm, help="Do not copy files that match any entry in this list. * or all means do not copy any not-converted files.")
@@ -198,8 +199,8 @@ except (subprocess.SubprocessError, FileNotFoundError):
     print("If you have tried to use `-cjxlpath` make sure it points to the executable.")
     exit(-1)
 
-if not args.ignore_not_empty and args.output_dir.exists() and len(os.listdir(args.output_dir)) > 0:
-    print("Your output directory is not empty. If you continue using --ignore-not-empty existing files may be overwritten")
+if not args.ignore_not_empty and not args.ignore_not_empty_and_preserve and args.output_dir.exists() and len(os.listdir(args.output_dir)) > 0:
+    print("Your output directory is not empty. If you continue using --ignore-not-empty-and-preserve existing files with the same name are preserved.")
     exit(-1)
 
 if not args.cjxlargs and not args.preset:
@@ -231,12 +232,21 @@ if args.preset == 3:
 def copy_file(in_filepath: Path, out_filepath: Path) -> Path:
     if args.fat:
         out_filepath = make_fat32_compatible(out_filepath)
+    if args.ignore_not_empty_and_preserve and out_filepath.exists():
+        if args.v:
+            print("  File {} already exists. Skipping".format(out_filepath))
+        return
 
     shutil.copyfile(in_filepath, out_filepath, follow_symlinks=False)
 
 def convert_file(in_filepath: Path, out_filepath: Path) -> Path:
     if args.fat:
         out_filepath = make_fat32_compatible(out_filepath)
+
+    if args.ignore_not_empty_and_preserve and out_filepath.exists():
+        if args.v:
+            print("  File {} already exists. Skipping".format(out_filepath))
+        return
 
     cmd = [ Path(args.cjxlpath), Path(in_filepath), Path(out_filepath), '-e', str(args.cjxleffort) ]
     if args.vv:
@@ -252,6 +262,11 @@ with tempfile.TemporaryDirectory() as tempdir:
         # use threadpool for ffmpeg conversion as audio conversion is assumed to be singlethreaded 
         with futures.ThreadPoolExecutor(max_workers=args.max_workers, thread_name_prefix='converter') as convertexecutor:
             convert_tasks = set()
+
+            # if you passed ignore_not_empty, we don't want to run into a loop and reconvert pics we already converted
+            if args.input_dir.resolve() == args.output_dir.resolve():
+                pop_element_from_list(args.ifm, args.ofm)
+            
             print("Starting conversion of folder {} to folder {}".format(args.input_dir, args.output_dir))
             print("Files with the endings {} will be converted to {}".format(str(args.ifm), args.ofm))
             print("Codec options to be passed to cjxl: ", str.join(' ', args.cjxlargs))

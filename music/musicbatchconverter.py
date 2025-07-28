@@ -345,6 +345,11 @@ with tempfile.TemporaryDirectory() as tempdir:
         # use threadpool for ffmpeg conversion as audio conversion is assumed to be singlethreaded 
         with futures.ThreadPoolExecutor(max_workers=args.max_workers, thread_name_prefix='converter') as convertexecutor:
             convert_tasks = set()
+
+            # if you passed ignore_not_empty, we don't want to run into a loop and reconvert music we already converted
+            if args.input_dir.resolve() == args.output_dir.resolve():
+                pop_element_from_list(args.ifm, args.ofm)
+
             print("Starting conversion of folder {} to folder {}".format(args.input_dir, args.output_dir))
             print("Files with the endings {} will be converted to {}".format(str(args.ifm), args.ofm))
             print("Codec options to be passed to ffmpeg: ", str.join(' ', args.ffargs))
