@@ -227,8 +227,6 @@ if args.preset == 1:
     # visual_lossless
     args.ofm = argcheck_ofm("jxl")
     args.cjxlargs = argcheck_cjxlargs("-d 1 --lossless_jpeg=0")
-    if args.cjxleffort == 0:
-        args.cjxleffort = 9
 
 if args.preset == 2:
     # true_lossless
@@ -241,8 +239,6 @@ if args.preset == 3:
     # balanced
     args.ofm = argcheck_ofm("jxl")
     args.cjxlargs = argcheck_cjxlargs("-q 80 --lossless_jpeg=0")
-    if args.cjxleffort == 0:
-        args.cjxleffort = 7
 
 def copy_file(in_filepath: Path, out_filepath: Path) -> Path:
     if args.fat:
@@ -320,7 +316,7 @@ with futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='copy') as cop
                         # Copy file to destination
                         if args.v:
                             print("  copying file: " + str(name))
-                        copy_tasks.add(copyexecutor.submit(copy_file, in_filepath, path(out_dirpath, name)))
+                        copy_tasks.add(copyexecutor.submit(copy_file, in_filepath, Path(out_dirpath, name)))
 
                 if not args.v:
                     print("{} files to copy, {} files to convert".format(len(copy_tasks), len(convert_tasks)), end='\r')

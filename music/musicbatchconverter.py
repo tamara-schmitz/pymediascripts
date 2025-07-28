@@ -393,7 +393,7 @@ with tempfile.TemporaryDirectory() as tempdir:
                             # Copy file to destination
                             if args.v:
                                 print("  copying file: " + str(name))
-                            copy_tasks.add(copyexecutor.submit(copy_file, in_filepath, path(out_dirpath, name)))
+                            copy_tasks.add(copyexecutor.submit(copy_file, in_filepath, Path(out_dirpath, name)))
 
                     if not args.v:
                         print("{} files to copy, {} files to convert".format(len(copy_tasks), len(convert_tasks)), end='\r')
