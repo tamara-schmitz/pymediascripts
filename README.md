@@ -18,3 +18,9 @@ docker run --rm -it -v ./input_directory:/in:ro -v ./output_directory:/out:Z ghc
 ```bash
 docker run --rm -it -v ./input_directory:/in:ro -v ./output_directory:/out:Z ghcr.io/tamara-schmitz/pymediascripts-music -p smaller /in /out
 ```
+
+### Use the picture converter
+
+```bash
+docker run --rm -it -v ./input_directory:/in:ro -v ./output_directory:/out:Z ghcr.io/tamara-schmitz/pymediascripts-picture -p smaller /in /out
+```
