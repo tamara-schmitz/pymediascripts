@@ -120,8 +120,8 @@ def argcheck_cfm(string) -> str:
             raise argparse.ArgumentError()
     return cf_mask
 def argcheck_ms(string) -> int:
-    ms_string = string.strip().lower()
     ms_val = 0
+    ms_string = string.strip().lower()
     try:
         ms_val = int(ms_string)
     except ValueError:
@@ -307,7 +307,7 @@ with futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='copy') as cop
                 # Evaluate file
                 if name.lower().endswith(tuple(args.ifm)):
                     out_filepath = Path(out_dirpath, Path(name).stem + '.' + args.ofm)
-                    if minimumfilesize > 0 and minimumfilesize > in_filepath.stat().st_size:
+                    if args.minimumfilesize > 0 and args.minimumfilesize > in_filepath.stat().st_size:
                         copy_tasks.add(copyexecutor.submit(copy_file, in_filepath, out_filepath))
                     else:
                         convert_tasks.add(convertexecutor.submit(convert_file, in_filepath, out_filepath))
