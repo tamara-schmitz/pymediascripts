@@ -120,11 +120,21 @@ def argcheck_cfm(string) -> str:
             raise argparse.ArgumentError()
     return cf_mask
 def argcheck_ms(string) -> int:
-    if string == "0":
-        return 0
-    # TODO!
-    # https://github.com/xolox/python-humanfriendly
-    return 0
+    ms_string = string.strip().lower()
+    ms_val = 0
+    try:
+        ms_val = int(ms_string)
+    except ValueError:
+        units = {"b": 1,
+                 "kb": 1000, "k": 1000, "kib": 1024,
+                 "mb": 1000**2, "m": 1000**2, "mib": 1024**2,
+                 "gb": 1000**3, "g": 1000**3, "gib": 1024**3,
+                 "tb": 1000**4, "t": 1000**4, "tib": 1024**4,
+                 "pb": 1000**4, "p": 1000**4, "pib": 1024**5}
+        number, unit = [element.strip() for element in ms_string.split()]
+        ms_val = int(float(number)*units[unit])
+
+    return max(0, ms_val)
 def argcheck_cjxlpath(string) -> str:
     cjxlpath = string.strip()
     if 'cjxl' not in cjxlpath: # also check if path exists
@@ -134,7 +144,6 @@ def argcheck_cjxlpath(string) -> str:
 def argcheck_cjxlargs(string) -> list:
     cjxlargs = string.strip().split(' ')
     return list(remove_empty_from_list(cjxlargs))
-
 def argcheck_preset(string) -> int:
     string = string.lower()
     if string == "visual_lossless":
@@ -254,7 +263,6 @@ def convert_file(in_filepath: Path, out_filepath: Path) -> Path:
             print("  File {} already exists. Skipping".format(out_filepath))
         return
 
-    if args.cjxl
     cmd = [ Path(args.cjxlpath), Path(in_filepath), Path(out_filepath) ]
     if args.vv:
         cmd.extend([ '--verbose' ])
