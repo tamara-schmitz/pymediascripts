@@ -254,9 +254,12 @@ def convert_file(in_filepath: Path, out_filepath: Path) -> Path:
             print("  File {} already exists. Skipping".format(out_filepath))
         return
 
-    cmd = [ Path(args.cjxlpath), Path(in_filepath), Path(out_filepath), '-e', str(args.cjxleffort) ]
+    if args.cjxl
+    cmd = [ Path(args.cjxlpath), Path(in_filepath), Path(out_filepath) ]
     if args.vv:
         cmd.extend([ '--verbose' ])
+    if args.cjxleffort > 0 and args.cjxleffort < 10:
+        cmd.extend([ '-e', str(args.cjxleffort) ])
     cmd.extend(args.cjxlargs)
     exec_cmd(cmd)
 
