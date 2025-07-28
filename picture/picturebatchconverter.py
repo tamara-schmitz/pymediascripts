@@ -192,7 +192,7 @@ try:
     parser.add_argument("-cjxlpath", "--cjxlpath", dest="cjxlpath", default="cjxl", type=argcheck_cjxlpath, help="Path to cjxl")
     parser.add_argument("-cjxlargs", "--cjxlarguments", dest="cjxlargs", type=argcheck_cjxlargs, help="Codec options to submit to cjxl. Choosing a preset overwrites these.")
     parser.add_argument("-e", "--cjxleffort", dest="cjxleffort", default=0, type=int, help="CJXL's effort into compressing files. Goes from 1 to 9, low to high.")
-    parser.add_argument("-max_workers", default=max(1, os.cpu_count() / 2), type=int, help="Set max parallel converter tasks. By default this is half CPU thread count to save memory.")
+    parser.add_argument("-max_workers", default=min(3, os.cpu_count()), type=int, help="Set max parallel converter tasks. By default this is at most four to save memory.")
     parser.add_argument("-v", "--verbose", dest="v", help="Verbose mode", action="store_true")
     parser.add_argument("-vv", "--allverbose", dest="vv", help="Verbose mode for cjxl", action="store_true")
     parser.add_argument("-p", "--preset", default="", type=argcheck_preset,
