@@ -22,5 +22,5 @@ docker run --rm -it -v ./input_directory:/in:ro -v ./output_directory:/out:Z ghc
 ### Use the picture converter
 
 ```bash
-docker run --rm -it -v ./input_directory:/in:ro -v ./output_directory:/out:Z ghcr.io/tamara-schmitz/pymediascripts-picture -p smaller /in /out
+docker run --rm -it -v ./input_directory:/in:ro -v ./output_directory:/out:Z ghcr.io/tamara-schmitz/pymediascripts-picture -p visual_lossless /in /out
 ```
