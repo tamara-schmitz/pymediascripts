@@ -284,7 +284,8 @@ def convert_file(in_filepath: Path, out_filepath: Path, recursive: bool) -> Path
         convert_file(intermediary_path, out_filepath, True)
         os.remove(intermediary_path)
         if not out_filepath.exists():
-            print("  Unable to read and convert {}.")
+            print("  Unable to read and convert {}. Copying instead as is.")
+            copy_file(in_filepath, out_filepath)
 
 # use thread queue for copying to ensure that long copy operations do not starve the conversion task pool
 with futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='copy') as copyexecutor:
