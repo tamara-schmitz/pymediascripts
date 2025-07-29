@@ -1,6 +1,6 @@
 FROM registry.opensuse.org/opensuse/tumbleweed
 
-ENV ZYPPER_PACKAGES="python3 libjxl-tools"
+ENV ZYPPER_PACKAGES="python3 libjxl-tools ImageMagick"
 
 RUN	zypper --non-interactive dup && \
 	zypper --non-interactive install --recommends $ZYPPER_PACKAGES && \

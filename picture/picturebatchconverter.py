@@ -1,10 +1,11 @@
 #!/usr/bin/python3
 
-# Requires cjxl command!
+# Requires cjxl and optionally magick command!
 
 import os
 import shutil
 from pathlib import Path
+import tempfile
 import unicodedata
 import textwrap
 import argparse
@@ -144,6 +145,12 @@ def argcheck_cjxlpath(string) -> str:
 def argcheck_cjxlargs(string) -> list:
     cjxlargs = string.strip().split(' ')
     return list(remove_empty_from_list(cjxlargs))
+def argcheck_magickpath(string) -> str:
+    magickpath = string.strip()
+    if 'magick' not in magickpath: # also check if path exists
+        print('Expected a valid path or environment to magick binary')
+        raise argparse.ArgumentError()
+    return magickpath
 def argcheck_preset(string) -> int:
     string = string.lower()
     if string == "visual_lossless":
@@ -185,12 +192,13 @@ try:
     parser.add_argument("--ignore-dir", type=Path, help="Ignore directory with the specified folder name.")
     parser.add_argument("--ignore-not-empty", action="store_true", help="continue even if the output directory contains files. This overwrites existing files.")
     parser.add_argument("--ignore-not-empty-and-preserve",action="store_true", help="continue even if the output directory contains files. Skip existing files with the same name.")
-    parser.add_argument("-ifm", "--inputfilemask", dest="ifm", default="png,jpg,jpeg,jfif,pjpeg,pjp,avif,webp,bmp,apng,gif,tiff,tif", type=argcheck_ifm, help="Filter mask defining which files will be converted. Other files are copied")
+    parser.add_argument("-ifm", "--inputfilemask", dest="ifm", default="png,apng,jpg,jpeg,jfif,webp,pam,pgm,ppm,bmp,gif,avif,tif,tiff", type=argcheck_ifm, help="Filter mask defining which files will be converted. Other files are copied")
     parser.add_argument("-ofm", "--outputformat", dest="ofm", default="jxl", type=argcheck_ofm, help="Output format of converted files")
     parser.add_argument("-cfm", "--copyfilemask", dest="cfm", default="*", type=argcheck_cfm, help="Do not copy files that match any entry in this list. * or all means do not copy any not-converted files.")
     parser.add_argument("-ms", "--minimumfilesize", dest="minimumfilesize", default="0", type=argcheck_ms, help="Do not convert but copy files that are smaller than given filesize. Example: 100KiB or 1MiB")
-    parser.add_argument("-cjxlpath", "--cjxlpath", dest="cjxlpath", default="cjxl", type=argcheck_cjxlpath, help="Path to cjxl")
+    parser.add_argument("-cjxlpath", "--cjxlpath", dest="cjxlpath", default="cjxl", type=argcheck_cjxlpath, help="Path to cjxl binary.")
     parser.add_argument("-cjxlargs", "--cjxlarguments", dest="cjxlargs", type=argcheck_cjxlargs, help="Codec options to submit to cjxl. Choosing a preset overwrites these.")
+    parser.add_argument("-magickpath", "--magickpath", dest="magickpath", default="magick", type=argcheck_magickpath, help="Path to magick binary.")
     parser.add_argument("-e", "--cjxleffort", dest="cjxleffort", default=0, type=int, help="CJXL's effort into compressing files. Goes from 1 to 9, low to high.")
     parser.add_argument("-max_workers", default=min(3, os.cpu_count()), type=int, help="Set max parallel converter tasks. By default this is at most four to save memory.")
     parser.add_argument("-v", "--verbose", dest="v", help="Verbose mode", action="store_true")
@@ -226,7 +234,7 @@ if not args.cjxlargs and not args.preset:
 if args.preset == 1:
     # visual_lossless
     args.ofm = argcheck_ofm("jxl")
-    args.cjxlargs = argcheck_cjxlargs("-d 1 --lossless_jpeg=0")
+    args.cjxlargs = argcheck_cjxlargs("-d 0.9 --lossless_jpeg=0")
 
 if args.preset == 2:
     # true_lossless
@@ -250,7 +258,7 @@ def copy_file(in_filepath: Path, out_filepath: Path) -> Path:
 
     shutil.copyfile(in_filepath, out_filepath, follow_symlinks=False)
 
-def convert_file(in_filepath: Path, out_filepath: Path) -> Path:
+def convert_file(in_filepath: Path, out_filepath: Path, recursive: bool) -> Path:
     if args.fat:
         out_filepath = make_fat32_compatible(out_filepath)
 
@@ -266,6 +274,17 @@ def convert_file(in_filepath: Path, out_filepath: Path) -> Path:
         cmd.extend([ '-e', str(args.cjxleffort) ])
     cmd.extend(args.cjxlargs)
     exec_cmd(cmd)
+
+    if not recursive and not out_filepath.exists():
+        if args.v:
+            print("  Conversion of {} failed. Using magick to help out".format(out_filepath))
+        intermediary_path = Path(out_filepath.parent, out_filepath.stem + ".png")
+        cmd = [ Path(args.magickpath), Path(in_filepath), "-render", "-auto-orient", Path(intermediary_path) ]
+        exec_cmd(cmd)
+        convert_file(intermediary_path, out_filepath, True)
+        os.remove(intermediary_path)
+        if not out_filepath.exists():
+            print("  Unable to read and convert {}.")
 
 # use thread queue for copying to ensure that long copy operations do not starve the conversion task pool
 with futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='copy') as copyexecutor:
@@ -306,7 +325,7 @@ with futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix='copy') as cop
                     if args.minimumfilesize > 0 and args.minimumfilesize > in_filepath.stat().st_size:
                         copy_tasks.add(copyexecutor.submit(copy_file, in_filepath, out_filepath))
                     else:
-                        convert_tasks.add(convertexecutor.submit(convert_file, in_filepath, out_filepath))
+                        convert_tasks.add(convertexecutor.submit(convert_file, in_filepath, out_filepath, False))
                 else:
                     if args.cfm == '*':
                         pass
