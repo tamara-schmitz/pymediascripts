@@ -320,8 +320,8 @@ def convert_file(in_filepath: Path, out_filepath: Path) -> Path:
         cmd.append(os.devnull)
         ana_result = exec_cmd(cmd, output=subprocess.PIPE)
         ana_result = str(ana_result.stdout, "utf8")
-        i_loudness = re.search("Integrated\sloudness\:\s+I\:\s+(\-\d+\.?\d*)", ana_result).groups()[0]
-        i_loudrange = re.search("Loudness\srange\:\s+LRA\:\s+(\d+\.?\d*)", ana_result).groups()[0]
+        i_loudness = re.search(r"Integrated\sloudness\:\s+I\:\s+(\-\d+\.?\d*)", ana_result).groups()[0]
+        i_loudrange = re.search(r"Loudness\srange\:\s+LRA\:\s+(\d+\.?\d*)", ana_result).groups()[0]
 
         # difference between target integrated LUFS and original vol
         # dynamic music will get a slight volume boost
