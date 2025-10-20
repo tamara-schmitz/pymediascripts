@@ -274,18 +274,19 @@ def extract_coverart(in_filepath: Path, tempdir: Path) -> Path:
     @returns path_to_coverart
     '''
 
-    # search for coverart in parent folder
     if not args.alwayscover:
-        # the order is respected and represents priorities
-        iter_coverart_names = ('Folder.jpg', 'folder.jpg', 'Folder.png', 'folder.png',
-                               'Cover.jpg', 'cover.jpg', 'Cover.png', 'cover.png',
-                               'Album.jpg', 'album.jpg', 'Album.png', 'album.png',
+        # search for coverart in parent folder
+        # the order of these names is respected and represents priorities
+        iter_coverart_names = ('folder.jpg', 'folder.png',
+                               'cover.jpg', 'cover.png',
+                               'album.jpg', 'album.png',
                                'Thumb.jpg', 'AlbumArtSmall.jpg')
         for child in in_filepath.parent.iterdir():
             for cname in iter_coverart_names:
-                cpath = child.joinpath(cname)
-                if cpath.exists():
-                    return cpath
+                cglob = child.glob(cname, case_sensitive=False)
+                for cpath in cglob:
+                    if cpath.exists():
+                        return cpath
 
     # extract coverart from source if possible
     if in_filepath.exists() :
@@ -293,7 +294,7 @@ def extract_coverart(in_filepath: Path, tempdir: Path) -> Path:
         cmd = [ Path(args.ffpath), '-y', '-i', Path(in_filepath) ]
         cmd.extend(["-map", "0:v", "-q:v", "5", cpath])
         if not args.vff:
-            cmd.extend([ '-loglevel', 'error' ])
+            cmd.extend([ '-loglevel', 'fatal' ])
         if exec_cmd(cmd).returncode == 0:
             return cpath
 
