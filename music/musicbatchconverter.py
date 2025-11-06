@@ -143,6 +143,8 @@ def argcheck_preset(string) -> int:
         return 3
     elif string == "normalized":
         return 4
+    elif string == "mp4walkman":
+        return 6
     elif string == "cd-wav":
         return 10
     elif string == "flac":
@@ -190,7 +192,7 @@ try:
     parser.add_argument("-v", "--verbose", dest="v", help="Verbose mode", action="store_true")
     parser.add_argument("-vff", "--verboseffmpeg", dest="vff", help="Verbose mode for ffmpeg", action="store_true")
     parser.add_argument("-p", "--preset", default="", type=argcheck_preset,
-                        help="Set a preset that overwrites other arguments. Possible values: smaller (opus), compatible (mp3), dynamic_compressed (mka), normalized (mka), cd-wav (wav), flac, cd-flac")
+                        help="Set a preset that overwrites other arguments. Possible values: smaller (opus), compatible (mp3), dynamic_compressed (mka), normalized (mka), mp4walkman (mp4), cd-wav (wav), flac, cd-flac")
     parser.add_argument("-fat", "--fat32-compatible", dest="fat", help="Ensure that paths and filenames are compliant with FAT32 filesystems", action="store_true")
     parser.add_argument("--no-extract-coverart", dest="nocover", help="Skip the extraction of cover art from metadata", action="store_true")
     parser.add_argument("--always-extract-coverart", dest="alwayscover", help="Always extract cover art from metadata even if existing cover art was found", action="store_true")
@@ -247,6 +249,12 @@ if args.preset == 4:
                                   " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
                                   " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99" +
                                   " -af aresample=osf=flt:osr=192000:filter_type=kaiser,alimiter=limit=-1.0dB:level=off:attack=2:release=50:level_in=")
+
+if args.preset == 6:
+    # mp4walkman
+    args.ofm = argcheck_ofm("mp4")
+    if not args.ffargs:
+        args.ffargs = argcheck_ffargs("-map 0:a -c:a libfdk_aac -vbr 4 -profile:a aac_low -ac 2")
 
 if args.preset == 10:
     # CD-Wav
