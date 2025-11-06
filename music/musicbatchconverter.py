@@ -196,6 +196,7 @@ try:
     parser.add_argument("-fat", "--fat32-compatible", dest="fat", help="Ensure that paths and filenames are compliant with FAT32 filesystems", action="store_true")
     parser.add_argument("--no-extract-coverart", dest="nocover", help="Skip the extraction of cover art from metadata", action="store_true")
     parser.add_argument("--always-extract-coverart", dest="alwayscover", help="Always extract cover art from metadata even if existing cover art was found", action="store_true")
+    parser.add_argument("--no-copy", dest="nocopy", help="Skip copying non-music files over. Usually all non-converted files are preserved. But setting this option, skips that step.", action="store_true")
 
     args = parser.parse_args()
 
@@ -398,7 +399,7 @@ with tempfile.TemporaryDirectory() as tempdir:
                             pass
                         elif name.lower().endswith(tuple(args.cfm)):
                             pass
-                        else:
+                        elif nocopy:
                             # Copy file to destination
                             if args.v:
                                 print("  copying file: " + str(name))
