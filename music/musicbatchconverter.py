@@ -255,7 +255,7 @@ if args.preset == 6:
     # mp4walkman
     args.ofm = argcheck_ofm("mp4")
     if not args.ffargs:
-        args.ffargs = argcheck_ffargs("-map 0:a -c:a libfdk_aac -vbr 4 -profile:a aac_low -ac 2")
+        args.ffargs = argcheck_ffargs("-map 0:a -c:a libfdk_aac -vbr 5 -profile:a aac_low -ac 2")
 
 if args.preset == 10:
     # CD-Wav
