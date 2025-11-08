@@ -183,7 +183,7 @@ try:
     parser.add_argument("output_dir", type=Path, help="output folder. Use \\ or \" for names with spaces")
     parser.add_argument("--ignore-dir", type=Path, help="Ignore directory with the specified folder name.")
     parser.add_argument("--ignore-not-empty", action="store_true", help="continue even if the output directory contains files. This overwrites existing files.")
-    parser.add_argument("-ifm", "--inputfilemask", dest="ifm", default="flac,wav,aif,aiff,ape,dsd,mp3,ogg,mka,m4a,wma", type=argcheck_ifm, help="Filter mask defining which files will be converted. Other files are copied")
+    parser.add_argument("-ifm", "--inputfilemask", dest="ifm", default="flac,wav,aif,aiff,ape,dsd,mp3,ogg,opus,mka,m4a,wma,mp4,aac", type=argcheck_ifm, help="Filter mask defining which files will be converted. Other files are copied")
     parser.add_argument("-ofm", "--outputformat", dest="ofm", default="ogg", type=argcheck_ofm, help="Output format of converted files")
     parser.add_argument("-cfm", "--copyfilemask", dest="cfm", default="*", type=argcheck_cfm, help="Do not copy files that match any entry in this list. * or all means do not copy any not-converted files.")
     parser.add_argument("-ffpath", "--ffmpegpath", dest="ffpath", default="ffmpeg", type=argcheck_ffpath, help="Path to ffmpeg")
@@ -261,7 +261,8 @@ if args.preset == 10:
     # CD-Wav
     args.ofm = argcheck_ofm("wav")
     if not args.ffargs:
-        args.ffargs = argcheck_ffargs(" -c:a pcm_s16le -af aresample=osf=flt,alimiter=limit=-1dB:level=off:attack=2.5:release=15,aresample=osr=44100:resampler=swr:filter_type=kaiser:osf=s16:dither_method=triangular_hp ")
+        # for limiting after resampling -0.25dB would suffice. but when limiting pre resample -1dB is just quiet enough
+        args.ffargs = argcheck_ffargs(" -c:a pcm_s16le -af aresample=osf=flt:osr=44100:resampler=swr:filter_type=kaiser,alimiter=limit=-0.1dB:level=off:attack=2.5:release=15,aresample=osf=s16:dither_method=triangular_hp ")
 
 if args.preset == 11:
     # Flac
@@ -274,8 +275,7 @@ if args.preset == 12:
     # CD-Flac
     args.ofm = argcheck_ofm("flac")
     # downsampling can cause clipping, so limiting is applied before converting back to 16bit
-    # for limiting after resampling -0.25dB would suffice. but when limiting pre resample -1dB is just quiet enough
-    args.ffargs = argcheck_ffargs(" -c:a flac -compression_level 8 -af aresample=osf=flt,alimiter=limit=-1dB:level=off:attack=2.5:release=15,aresample=osr=44100:resampler=swr:filter_type=kaiser,aresample=osf=s16:dither_method=triangular_hp ")
+    args.ffargs = argcheck_ffargs(" -c:a flac -compression_level 8 -af aresample=osf=flt:osr=44100:resampler=swr:filter_type=kaiser,alimiter=limit=-0.1dB:level=off:attack=2.5:release=15,aresample=osf=s16:dither_method=triangular_hp ")
 
 def extract_coverart(in_filepath: Path, tempdir: Path) -> Path:
     '''
