@@ -263,20 +263,20 @@ if args.preset == 10:
     args.ofm = argcheck_ofm("wav")
     if not args.ffargs:
         # for limiting after resampling -0.25dB would suffice. but when limiting pre resample -1dB is just quiet enough
-        args.ffargs = argcheck_ffargs(" -c:a pcm_s16le -af aresample=osf=flt:osr=44100:resampler=swr:filter_type=kaiser,alimiter=limit=-0.1dB:level=off:attack=2.5:release=15,aresample=osf=s16:dither_method=triangular_hp ")
+        args.ffargs = argcheck_ffargs("-c:a pcm_s16le -af aresample=osf=flt:osr=44100:resampler=swr:filter_type=kaiser,alimiter=limit=-0.1dB:level=off:attack=2.5:release=15,aresample=osf=s16:dither_method=triangular_hp")
 
 if args.preset == 11:
     # Flac
     pop_element_from_list(args.ifm, "flac")
     args.ofm = argcheck_ofm("flac")
     if not args.ffargs:
-        args.ffargs = argcheck_ffargs(" -c:a flac -compression_level 8 ")
+        args.ffargs = argcheck_ffargs("-c:a flac -compression_level 8")
 
 if args.preset == 12:
     # CD-Flac
     args.ofm = argcheck_ofm("flac")
     # downsampling can cause clipping, so limiting is applied before converting back to 16bit
-    args.ffargs = argcheck_ffargs(" -c:a flac -compression_level 8 -af aresample=osf=flt:osr=44100:resampler=swr:filter_type=kaiser,alimiter=limit=-0.1dB:level=off:attack=2.5:release=15,aresample=osf=s16:dither_method=triangular_hp ")
+    args.ffargs = argcheck_ffargs("-c:a flac -compression_level 8 -af aresample=osf=flt:osr=44100:resampler=swr:filter_type=kaiser,alimiter=limit=-0.1dB:level=off:attack=2.5:release=15,aresample=osf=s16:dither_method=triangular_hp")
 
 def extract_coverart(in_filepath: Path, tempdir: Path) -> Path:
     '''
