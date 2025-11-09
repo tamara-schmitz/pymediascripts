@@ -225,7 +225,7 @@ if not args.ffargs and not args.preset:
 if args.preset == 1:
     # smaller
     args.ofm = argcheck_ofm("ogg")
-    args.ffargs = argcheck_ffargs("-hide_banner -c:a libopus -b:a 160k -vbr 2 -frame_duration 60 -ac 2")
+    args.ffargs = argcheck_ffargs("-c:a libopus -b:a 160k -vbr 2 -frame_duration 60 -ac 2")
 
 if args.preset == 2:
     # compatible
@@ -237,7 +237,7 @@ if args.preset == 2:
 if args.preset == 3:
     # dynamic_compressed
     args.ofm = argcheck_ofm("mka")
-    args.ffargs = argcheck_ffargs("-hide_banner -map 0:a -ac 2 -c copy" +
+    args.ffargs = argcheck_ffargs("-map 0:a -ac 2 -c copy" +
                                   " -c:a libopus -b:a 192k -vbr 2 -frame_duration 120 " +
                                   " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
                                   " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99" +
@@ -245,7 +245,7 @@ if args.preset == 3:
 if args.preset == 4:
     # normalized
     args.ofm = argcheck_ofm("mka")
-    args.ffargs = argcheck_ffargs("-hide_banner -map 0:a -ac 2 -c copy" +
+    args.ffargs = argcheck_ffargs("-map 0:a -ac 2 -c copy" +
                                   " -c:a libopus -b:a 192k -vbr 2 -frame_duration 120" +
                                   " -metadata REPLAYGAIN_ALBUM_GAIN=0 -metadata REPLAYGAIN_ALBUM_PEAK=0.99" +
                                   " -metadata REPLAYGAIN_TRACK_GAIN=0 -metadata REPLAYGAIN_TRACK_PEAK=0.99" +
@@ -256,7 +256,7 @@ if args.preset == 6:
     pop_element_from_list(args.ifm, "m4a")
     args.ofm = argcheck_ofm("m4a")
     if not args.ffargs:
-        args.ffargs = argcheck_ffargs(" -c:a libfdk_aac -vbr 5 -profile:a aac_low -ac 2 -af aresample=osr=44100:resampler=swr:filter_type=kaiser")
+        args.ffargs = argcheck_ffargs("-map 0:a -c:a libfdk_aac -vbr 5 -profile:a aac_low -ac 2 -af aresample=osr=44100:resampler=swr:filter_type=kaiser")
 
 if args.preset == 10:
     # CD-Wav
