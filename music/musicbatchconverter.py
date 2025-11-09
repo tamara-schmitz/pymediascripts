@@ -253,8 +253,7 @@ if args.preset == 4:
 
 if args.preset == 6:
     # mp4walkman
-    pop_element_from_list(args.ifm, "m4a")
-    args.ofm = argcheck_ofm("m4a")
+    args.ofm = argcheck_ofm("mp4")
     if not args.ffargs:
         args.ffargs = argcheck_ffargs("-map 0:a -c:a libfdk_aac -vbr 5 -profile:a aac_low -ac 2 -af aresample=osr=44100:resampler=swr:filter_type=kaiser")
 
