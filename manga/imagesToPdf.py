@@ -91,6 +91,7 @@ try:
     parser = argparse.ArgumentParser()
     parser.add_argument("in_folder_name", help="path to input folder with subdirs of pngs and jpgs")
     parser.add_argument("out_pdf_name", help="filename of output pdf")
+    parser.add_argument("--b5pagesize", help="Set page size to B5 which is the standard for printed manga. This ensures that page size is not image resolution dependent and consistent.", action="store_true")
     parser.add_argument("--no_png_alpha_removal", help="Remove alpha channel of all PNGs by converting them before adding to the PDF.", action="store_true")
     parser.add_argument("--no_webp_to_jpg", help="Unless set, all WebP images are converted to JPG for higher compatibility with older Ereaders and software", action="store_true")
     parser.add_argument("--no_avif_to_jpg", help="Unless set, all AVIF images are converted to JPG for higher compatibility with older Ereaders and software", action="store_true")
@@ -185,6 +186,9 @@ with tempfile.TemporaryDirectory() as tempdir:
         # Create PDF
         print("Creating actual PDF file.")
         with open(out_file, "wb") as outfhandle:
-            b5inpt = (img2pdf.mm_to_pt(176),img2pdf.mm_to_pt(250))
-            layout_b5 = img2pdf.get_layout_fun(pagesize=b5inpt, auto_orient=True)
-            outfhandle.write(img2pdf.convert(in_files_list, with_pdfrw=False, rotation=img2pdf.Rotation.ifvalid, layout_fun=layout_b5))
+            if args.b5pagesize:
+                b5inpt = (img2pdf.mm_to_pt(176), img2pdf.mm_to_pt(250))
+            else:
+                b5inpt = (img2pdf.mm_to_pt(176), None)
+            layout_fun = img2pdf.get_layout_fun(pagesize=b5inpt, auto_orient=True)
+            outfhandle.write(img2pdf.convert(in_files_list, with_pdfrw=False, rotation=img2pdf.Rotation.ifvalid, layout_fun=layout_fun))
