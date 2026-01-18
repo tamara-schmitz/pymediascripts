@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 # Requires img2pdf package! pip3 install img2pdf
-# As well as ImageMagick! (provides `convert`)
+# As well as ImageMagick! (provides `magick`)
 
 # TODO better exception handling when pngs contain alpha
 
@@ -73,11 +73,11 @@ def exec_cmd(cmd, output=None):
 
 # Check for runtime dependencies
 try:
-    subprocess.call(["convert", "-version"], stdout=subprocess.PIPE, shell=False)
+    subprocess.call(["magick", "-version"], stdout=subprocess.PIPE, shell=False)
 
 except (subprocess.SubprocessError, FileNotFoundError) as e:
     print(e)
-    print("This uses the `convert` command from ImageMagick. You need to make sure that ImageMagick is installed.")
+    print("This uses the `magick` command from ImageMagick. You need to make sure that ImageMagick is installed.")
     exit(-1)
 
 # Argument handling
@@ -136,7 +136,7 @@ with tempfile.TemporaryDirectory() as tempdir:
                         # Let ImageMagick remove the transparancy from the PNG
                         no_alpha_filename = os.fsencode(os.path.join(tempdir, 'tmp%s.png'%str(tempdir_filecounter)))
                         tempdir_filecounter += 1
-                        cmd = [ 'convert', os.path.join(dirpath, name),
+                        cmd = [ 'magick', os.path.join(dirpath, name),
                                '-background', 'white', '-alpha', 'remove',
                                '-define', 'png:compression-level=9',
                                '-strip', '-auto-orient',
@@ -150,7 +150,7 @@ with tempfile.TemporaryDirectory() as tempdir:
                         # Let ImageMagick convert the file to JPG
                         jpg_of_webp_filename = os.fsencode(os.path.join(tempdir, 'tmp%s.jpg'%str(tempdir_filecounter)))
                         tempdir_filecounter += 1
-                        cmd = [ 'convert', os.path.join(dirpath, name),
+                        cmd = [ 'magick', os.path.join(dirpath, name),
                                '-background', 'white', '-alpha', 'remove',
                                '-quality', '90', '-colorspace', 'YUV',
                                '-define', 'jpeg:dct-method=float',
