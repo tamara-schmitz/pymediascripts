@@ -163,4 +163,6 @@ with tempfile.TemporaryDirectory() as tempdir:
         # Create PDF
         print("Creating actual PDF file.")
         with open(out_file, "wb") as outfhandle:
-            outfhandle.write(img2pdf.convert(in_files_list, with_pdfrw=False, rotation=img2pdf.Rotation.ifvalid))
+            b5inpt = (img2pdf.mm_to_pt(176),img2pdf.mm_to_pt(250))
+            layout_b5 = img2pdf.get_layout_fun(pagesize=b5inpt, auto_orient=True)
+            outfhandle.write(img2pdf.convert(in_files_list, with_pdfrw=False, rotation=img2pdf.Rotation.ifvalid, layout_fun=layout_b5))
