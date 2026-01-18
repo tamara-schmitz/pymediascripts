@@ -49,6 +49,12 @@ def natural_keys(text):
 
     return [ atoi(c) for c in _regex_split.split(text) ]
 
+tempdir_filecounter = 0
+def tempdir_filename() -> bytes:
+    global tempdir_filecounter
+    tempdir_filecounter += 1
+    return os.fsencode(os.path.join(tempdir, 'tmp%s.jpg'%str(tempdir_filecounter)))
+
 def exec_cmd(cmd, output=None):
     if isinstance(cmd, str):
         cmd = cmd.split(' ')
@@ -115,7 +121,6 @@ alpha_files_list = []
 
 # use tempdir for image conversion
 with tempfile.TemporaryDirectory() as tempdir:
-    tempdir_filecounter = 1
 
     # use threadpool for image conversion
     with futures.ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
@@ -132,12 +137,12 @@ with tempfile.TemporaryDirectory() as tempdir:
                 elif name.lower().endswith((b'.jpg', b'.jpeg')):
                     in_files_list.append(os.path.join(dirpath, name))
                 elif name.lower().endswith((b'.png')):
+                    # We cannot have an alpha channel in PNGs
                     if args.no_png_alpha_removal:
                         in_files_list.append(os.path.join(dirpath, name))
                     else:
                         # Let ImageMagick remove the transparancy from the PNG
-                        no_alpha_filename = os.fsencode(os.path.join(tempdir, 'tmp%s.png'%str(tempdir_filecounter)))
-                        tempdir_filecounter += 1
+                        no_alpha_filename = tempdir_filename()
                         cmd = [ 'magick', os.path.join(dirpath, name),
                                '-background', 'white', '-alpha', 'remove',
                                '-define', 'png:compression-level=9',
@@ -146,14 +151,25 @@ with tempfile.TemporaryDirectory() as tempdir:
                         executor.submit(exec_cmd, cmd)
                         in_files_list.append(no_alpha_filename)
                 else:
-                    if (name.lower().endswith((b'.webp')) and args.no_webp_to_jpg or
-                            name.lower().endswith((b'.avif')) and args.no_avif_to_jpg or
-                            name.lower().endswith((b'.jxl')) and args.no_jxl_to_jpg):
-                        in_files_list.append(os.path.join(dirpath, name))
-                    else:
+                    convert_the_image = False
+                    if name.lower().endswith((b'.webp')):
+                        if args.no_webp_to_jpg:
+                            in_files_list.append(os.path.join(dirpath, name))
+                        else:
+                            convert_the_image = True
+                    elif name.lower().endswith((b'.avif')):
+                        if args.no_avif_to_jpg:
+                            in_files_list.append(os.path.join(dirpath, name))
+                        else:
+                            convert_the_image = True
+                    elif name.lower().endswith((b'.jxl')):
+                        if args.no_jxl_to_jpg:
+                            in_files_list.append(os.path.join(dirpath, name))
+                        else:
+                            convert_the_image = True
+                    if convert_the_image:
                         # Let ImageMagick convert the file to JPG
-                        jpg_of_other_filename = os.fsencode(os.path.join(tempdir, 'tmp%s.jpg'%str(tempdir_filecounter)))
-                        tempdir_filecounter += 1
+                        jpg_of_other_filename = tempdir_filename()
                         cmd = [ 'magick', os.path.join(dirpath, name),
                                '-background', 'white', '-alpha', 'remove',
                                '-quality', '90', '-colorspace', 'YUV',
