@@ -86,7 +86,9 @@ try:
     parser.add_argument("in_folder_name", help="path to input folder with subdirs of pngs and jpgs")
     parser.add_argument("out_pdf_name", help="filename of output pdf")
     parser.add_argument("--no_png_alpha_removal", help="Remove alpha channel of all PNGs by converting them before adding to the PDF.", action="store_true")
-    parser.add_argument("--no_webp_to_jpg", help="Unless set all WebP images are converted to JPG for higher compatibility with older Ereaders and software", action="store_true")
+    parser.add_argument("--no_webp_to_jpg", help="Unless set, all WebP images are converted to JPG for higher compatibility with older Ereaders and software", action="store_true")
+    parser.add_argument("--no_avif_to_jpg", help="Unless set, all AVIF images are converted to JPG for higher compatibility with older Ereaders and software", action="store_true")
+    parser.add_argument("--no_jxl_to_jpg", help="Unless set, all JXL images are converted to JPG for higher compatibility with older Ereaders and software", action="store_true")
     parser.add_argument("-v", help="Verbose mode", action="store_true")
     parser.add_argument("--dry", help="Dry run. Useful to check the chapter order.", action="store_true")
 
@@ -127,9 +129,9 @@ with tempfile.TemporaryDirectory() as tempdir:
                 # Evaluate file
                 if args.dry:
                     continue
-                elif name.endswith((b'.jpg', b'.JPG', b'.jpeg', b'.JPEG')):
+                elif name.lower().endswith((b'.jpg', b'.jpeg')):
                     in_files_list.append(os.path.join(dirpath, name))
-                elif name.endswith((b'.png', b'.PNG')):
+                elif name.lower().endswith((b'.png')):
                     if args.no_png_alpha_removal:
                         in_files_list.append(os.path.join(dirpath, name))
                     else:
@@ -143,21 +145,23 @@ with tempfile.TemporaryDirectory() as tempdir:
                                no_alpha_filename ]
                         executor.submit(exec_cmd, cmd)
                         in_files_list.append(no_alpha_filename)
-                elif name.endswith((b'.webp', b'.WEBP', b'.WebP')):
-                    if args.no_webp_to_jpg:
+                else:
+                    if (name.lower().endswith((b'.webp')) and args.no_webp_to_jpg or
+                            name.lower().endswith((b'.avif')) and args.no_avif_to_jpg or
+                            name.lower().endswith((b'.jxl')) and args.no_jxl_to_jpg):
                         in_files_list.append(os.path.join(dirpath, name))
                     else:
                         # Let ImageMagick convert the file to JPG
-                        jpg_of_webp_filename = os.fsencode(os.path.join(tempdir, 'tmp%s.jpg'%str(tempdir_filecounter)))
+                        jpg_of_other_filename = os.fsencode(os.path.join(tempdir, 'tmp%s.jpg'%str(tempdir_filecounter)))
                         tempdir_filecounter += 1
                         cmd = [ 'magick', os.path.join(dirpath, name),
                                '-background', 'white', '-alpha', 'remove',
                                '-quality', '90', '-colorspace', 'YUV',
                                '-define', 'jpeg:dct-method=float',
                                '-strip', '-auto-orient',
-                               jpg_of_webp_filename ]
+                               jpg_of_other_filename ]
                         executor.submit(exec_cmd, cmd)
-                        in_files_list.append(jpg_of_webp_filename)
+                        in_files_list.append(jpg_of_other_filename)
 
     if not args.dry:
         # Create PDF
