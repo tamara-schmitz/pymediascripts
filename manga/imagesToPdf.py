@@ -146,6 +146,7 @@ with tempfile.TemporaryDirectory() as tempdir:
                         cmd = [ 'magick', os.path.join(dirpath, name),
                                '-background', 'white', '-alpha', 'remove',
                                '-define', 'png:compression-level=9',
+                               '-define', 'png:compression-filter=6',
                                '-strip', '-auto-orient',
                                no_alpha_filename ]
                         executor.submit(exec_cmd, cmd)
@@ -174,6 +175,7 @@ with tempfile.TemporaryDirectory() as tempdir:
                                '-background', 'white', '-alpha', 'remove',
                                '-quality', '90', '-colorspace', 'YUV',
                                '-define', 'jpeg:dct-method=float',
+                               '-define', 'jpeg:optimize-coding=on',
                                '-strip', '-auto-orient',
                                jpg_of_other_filename ]
                         executor.submit(exec_cmd, cmd)
