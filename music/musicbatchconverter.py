@@ -168,7 +168,7 @@ try:
     ./musicbatchconverter.py music-album /phone/music-album
 
     To 320kbs MP3 using presets:
-    ./musicbatchconverter.py --preset 3 music-album /phone/music-album
+    ./musicbatchconverter.py --preset compatible music-album /phone/music-album
 
     Other filter and conversion to MP3:
     ./musicbatchconverter.py -ifm "flac,wav,aif,aac" -ofm mp3 -ffargs "-c:a libmp3lame -b:a 224k" -vff music-album /phone/music-album
